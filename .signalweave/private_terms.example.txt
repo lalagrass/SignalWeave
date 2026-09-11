@@ -1,0 +1,6 @@
+# One literal term per line. This file is safe to commit; copy it to
+# private_terms.txt and add source names, people, show titles, account handles,
+# internal project names, or other terms that must not reach a public remote.
+example-private-source
+@example_private_handle
+

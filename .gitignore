@@ -1,0 +1,21 @@
+# Never publish source material or derived private content.
+data/raw/
+data/inbox/
+data/private/
+*.transcript
+*.srt
+*.vtt
+*.mp3
+*.m4a
+
+# Local identity map and publication scan terms.
+.signalweave/private_terms.txt
+.signalweave/identity_map.yaml
+
+# Runtime and editor state.
+.venv/
+.cache-uv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.DS_Store

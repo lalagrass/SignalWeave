@@ -1,0 +1,11 @@
+# Synthetic example only. It deliberately contains no real source or company.
+event_id: evt_2026_001
+source: source_a
+source_locator: doc_2026_001#segment_12
+date: 2026-09-11
+kind: evidence
+summary: A supplier constraint may shift bargaining power upstream.
+candidate_threads:
+  - thread_supply_constraint
+review_status: proposed
+

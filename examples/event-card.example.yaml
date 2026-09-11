@@ -5,7 +5,13 @@ source_locator: doc_2026_001#segment_12
 date: 2026-09-11
 kind: evidence
 summary: A supplier constraint may shift bargaining power upstream.
+uncertainty: medium
+claims:
+  - A supply constraint may be emerging.
+mechanisms:
+  - Lower available capacity can increase supplier leverage.
+counterarguments:
+  - Demand may normalize before pricing changes.
 candidate_threads:
   - thread_supply_constraint
 review_status: proposed
-

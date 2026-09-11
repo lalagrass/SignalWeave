@@ -33,6 +33,19 @@ a guardrail, not a substitute for a human review.
 
 See [the product definition](docs/PRODUCT.md) and [privacy contract](docs/PRIVACY.md).
 
+## Validate a candidate event
+
+Candidate event cards are proposed observations, not accepted research records.
+Validate a YAML card before placing it in the private inbox:
+
+```bash
+uv run --no-sync signalweave validate-event examples/event-card.example.yaml
+```
+
+Validation checks the required fields, controlled values, source locator, and
+review gate. It does not inspect source material, create a thread, or accept a
+candidate on a reviewer's behalf.
+
 ## Local setup
 
 ```bash

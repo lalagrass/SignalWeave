@@ -3,6 +3,7 @@ name = "signalweave"
 version = "0.1.0"
 description = "Private research memory for evolving evidence-based threads"
 requires-python = ">=3.11"
+dependencies = ["PyYAML>=6.0"]
 
 [project.scripts]
 signalweave = "signalweave.cli:main"

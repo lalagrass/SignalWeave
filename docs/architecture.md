@@ -46,7 +46,7 @@ and a review date. It never stores a price-derived verdict.
 | Module | Responsibility | Status |
 | --- | --- | --- |
 | `public_check` | Prevent accidental publication of private material. | shipped |
-| `schema` | Validate event and thread records. | next |
+| `schema` | Validate candidate event records. | shipped |
 | `extract` | Produce candidate cards with locators and uncertainty. | planned |
 | `review` | Accept, reject, keep unlinked, or link a candidate. | planned |
 | `threads` | Append reviewed evidence to human-owned hypotheses. | planned |

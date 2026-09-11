@@ -4,12 +4,26 @@
 
 **Current phase:** 1 — transcript extraction v0
 
-The development, privacy, and handoff contract is complete. The repository has
-publication guardrails and a private source layout. No extractor, review
-workflow, or research records have been implemented yet.
+The development, privacy, and handoff contract is complete. Candidate event
+cards now have a validated schema and CLI. No extractor, review workflow, or
+reviewed research records have been implemented yet.
 
 **Last verified:** `uv sync --no-editable`, `uv run --no-sync pytest`, and
 `uv run --no-sync signalweave public-check` passed on 2026-09-11.
+
+## Completed: candidate event schema v0
+
+The shared contract for all future lenses is implemented. Candidate cards
+require traceability and uncertainty, and cannot mark themselves as accepted.
+
+Verification passed:
+
+```text
+uv sync --no-editable
+uv run --no-sync pytest
+uv run --no-sync signalweave validate-event examples/event-card.example.yaml
+uv run --no-sync signalweave public-check
+```
 
 ## Now: transcript extraction v0
 
@@ -21,20 +35,19 @@ zone.
 
 **Planned files:**
 
-- `src/signalweave/schema.py`
 - `src/signalweave/extract.py`
 - `src/signalweave/cli.py`
-- `tests/test_schema.py`
 - `tests/test_extract.py`
 
 **Acceptance criteria:**
 
-- A candidate event requires `event_id`, `source`, `source_locator`, `date`,
-  `kind`, `summary`, `review_status`, and `uncertainty`.
-- Invalid records fail with actionable validation errors.
-- Candidate output always includes a locator and never marks itself accepted.
+- Synthetic transcript segments can be supplied through a private input
+  interface without exposing their text in tracked output.
+- The extractor returns only `proposed` candidate events and always includes a
+  locator and uncertainty.
+- The extractor may return no candidates when no segment meets its threshold.
 - Tests use only synthetic source material.
-- `uv run pytest` and `uv run signalweave public-check` pass.
+- The documented verification commands pass.
 
 **Out of scope:** AI provider integration, automatic review, thread merging,
 and persona extraction.

@@ -41,6 +41,7 @@ def thread() -> object:
         invalidation_conditions=["Synthetic demand normalizes before pricing changes."],
         review_date="2026-12-15",
         created_by="researcher_a",
+        drafted_by="researcher_a",
         created_at=datetime(2026, 9, 11, tzinfo=timezone.utc),
     )
 
@@ -54,7 +55,24 @@ def test_thread_requires_human_mechanism_question_invalidation_and_review_date()
             invalidation_conditions=[],
             review_date="2026-12-15",
             created_by="researcher_a",
+            drafted_by="researcher_a",
         )
+
+
+def test_thread_tracks_drafted_by_separately_from_created_by() -> None:
+    record = create_thread(
+        thread_id="thread_supply_constraint",
+        mechanism="A synthetic mechanism.",
+        open_question="A synthetic question?",
+        invalidation_conditions=["A synthetic invalidation condition."],
+        review_date="2026-12-15",
+        created_by="researcher_a",
+        drafted_by="agent_signalweave",
+        created_at=datetime(2026, 9, 11, tzinfo=timezone.utc),
+    )
+
+    assert record.created_by == "researcher_a"
+    assert record.drafted_by == "agent_signalweave"
 
 
 @pytest.mark.parametrize("evidence_role", ["supporting", "counter"])
@@ -68,6 +86,7 @@ def test_thread_update_accepts_supporting_and_counter_evidence(evidence_role: st
         summary="A synthetic reviewed observation is relevant to the hypothesis.",
         event_date="2026-09-11",
         added_by="researcher_a",
+        drafted_by="researcher_a",
         added_at=datetime(2026, 9, 11, tzinfo=timezone.utc),
     )
 
@@ -86,6 +105,7 @@ def test_thread_update_requires_a_matching_link_review() -> None:
             summary="A synthetic summary.",
             event_date="2026-09-11",
             added_by="researcher_a",
+            drafted_by="researcher_a",
         )
 
 
@@ -102,6 +122,7 @@ def test_thread_storage_is_private_and_append_only(tmp_path: Path) -> None:
         summary="A synthetic reviewed observation is relevant to the hypothesis.",
         event_date="2026-09-11",
         added_by="researcher_a",
+        drafted_by="researcher_a",
         added_at=datetime(2026, 9, 11, tzinfo=timezone.utc),
     )
     update_path = append_thread_update(update, threads_directory)
@@ -127,6 +148,7 @@ def test_load_thread_and_updates_round_trip(tmp_path: Path) -> None:
             summary="A synthetic supporting observation.",
             event_date="2026-09-11",
             added_by="researcher_a",
+            drafted_by="researcher_a",
             added_at=datetime(2026, 9, 11, tzinfo=timezone.utc),
         ),
         threads_directory,
@@ -157,6 +179,7 @@ def test_load_thread_updates_orders_by_date_then_update_id(tmp_path: Path) -> No
                 summary="A synthetic observation.",
                 event_date=event_date,
                 added_by="researcher_a",
+                drafted_by="researcher_a",
                 added_at=datetime(2026, 9, 11, tzinfo=timezone.utc),
             ),
             threads_directory,

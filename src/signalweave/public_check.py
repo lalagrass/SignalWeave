@@ -3,10 +3,59 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import subprocess
 
 DEFAULT_BLOCKED_SUFFIXES = {".srt", ".vtt", ".mp3", ".m4a", ".transcript"}
 DEFAULT_BLOCKED_PARTS = {"data/raw", "data/inbox", "data/private"}
+
+# Directories whose synthetic-only convention (ADR-0001) means a literal
+# private-zone path in their content is a test fixture, not a real locator.
+SYNTHETIC_CONTENT_ROOTS = {"tests", "examples"}
+
+# A private-zone reference longer than its bare zone name, or one fixed
+# schema subfolder below it, names something concrete: that concrete thing is
+# a locator, and a locator is itself identifying.
+PRIVATE_LOCATOR_PATTERN = re.compile(r"data/(?:raw|inbox|private)/[\w./-]*")
+SAFE_PRIVATE_LOCATOR_PATTERNS = tuple(
+    re.compile(pattern)
+    for pattern in (
+        r"^data/raw/$",
+        r"^data/inbox/$",
+        r"^data/inbox/events/$",
+        r"^data/inbox/reviews/$",
+        r"^data/private/$",
+        r"^data/private/threads/$",
+        r"^data/private/worklog/$",
+    )
+)
+
+
+class PublicCheckConfigurationError(RuntimeError):
+    """Raised when public-check cannot run because local setup is missing."""
+
+
+def is_configured(root: Path) -> bool:
+    """Whether a local private-term list has been set up for this workspace."""
+    return (root / ".signalweave" / "private_terms.txt").is_file()
+
+
+def require_configuration(root: Path, *, allow_unconfigured: bool) -> None:
+    """Refuse to run a private-term scan that would silently be a no-op.
+
+    `violations` treats a missing `private_terms.txt` as "no terms", so an
+    unconfigured workspace would report a clean scan without ever looking for
+    anything. Call this before `violations` from the CLI so that case fails
+    loudly instead.
+    """
+    if allow_unconfigured or is_configured(root):
+        return
+    raise PublicCheckConfigurationError(
+        "no .signalweave/private_terms.txt found, so the private-term scan "
+        "would silently check nothing (see README.md 'Privacy and "
+        "publishing'). Create that file, or pass --allow-unconfigured to run "
+        "without one."
+    )
 
 
 def private_terms(root: Path) -> list[str]:
@@ -38,6 +87,19 @@ def public_paths(root: Path) -> list[Path]:
     return [root / item for item in result.stdout.decode().split("\0") if item]
 
 
+def _private_locators(content: str) -> list[str]:
+    """Return private-zone path references more specific than a bare zone."""
+    found: list[str] = []
+    for raw_candidate in PRIVATE_LOCATOR_PATTERN.findall(content):
+        # Trailing sentence punctuation is prose, not part of the path.
+        candidate = raw_candidate.rstrip(".,;:")
+        if candidate and not any(
+            pattern.match(candidate) for pattern in SAFE_PRIVATE_LOCATOR_PATTERNS
+        ):
+            found.append(candidate)
+    return found
+
+
 def violations(root: Path, *, paths: list[Path] | None = None) -> list[str]:
     """Return publish-blocking paths and configured private-term matches."""
     terms = private_terms(root)
@@ -61,4 +123,7 @@ def violations(root: Path, *, paths: list[Path] | None = None) -> list[str]:
         for term in terms:
             if term.casefold() in content.casefold():
                 found.append(f"private term {term!r} in {rel}")
+        if rel.split("/", 1)[0] not in SYNTHETIC_CONTENT_ROOTS:
+            for locator in _private_locators(content):
+                found.append(f"private-zone locator {locator!r} in {rel}")
     return found

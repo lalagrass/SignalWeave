@@ -7,6 +7,32 @@ import yaml
 from signalweave.cli import main
 
 
+def test_public_check_fails_loudly_when_unconfigured(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert main(["public-check"]) == 1
+    output = capsys.readouterr().out
+    assert "Publication check not run" in output
+    assert "private_terms.txt" in output
+
+
+def test_public_check_allow_unconfigured_runs_anyway(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert main(["public-check", "--allow-unconfigured"]) == 0
+    assert "Publication check passed" in capsys.readouterr().out
+
+
+def test_public_check_runs_when_configured(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(tmp_path)
+    signalweave_dir = tmp_path / ".signalweave"
+    signalweave_dir.mkdir()
+    (signalweave_dir / "private_terms.txt").write_text("term\n", encoding="utf-8")
+
+    assert main(["public-check"]) == 0
+    assert "Publication check passed" in capsys.readouterr().out
+
+
 def test_validate_event_accepts_a_valid_synthetic_yaml(tmp_path: Path, capsys) -> None:
     event = tmp_path / "event.yaml"
     event.write_text(
@@ -123,6 +149,8 @@ def test_create_thread_writes_only_a_private_thread(tmp_path: Path, monkeypatch,
                 "--review-date",
                 "2026-12-15",
                 "--created-by",
+                "researcher_a",
+                "--drafted-by",
                 "researcher_a",
                 "--created-at",
                 "2026-09-11T00:00:00+00:00",
@@ -292,6 +320,8 @@ uncertainty: medium
                 "2026-12-15",
                 "--created-by",
                 "researcher_a",
+                "--drafted-by",
+                "agent_signalweave",
                 "--created-at",
                 "2026-09-11T00:00:00+00:00",
             ]
@@ -337,6 +367,8 @@ uncertainty: medium
                 "2026-09-11",
                 "--added-by",
                 "researcher_a",
+                "--drafted-by",
+                "agent_signalweave",
                 "--added-at",
                 "2026-09-11T00:00:00+00:00",
             ]
@@ -350,13 +382,16 @@ uncertainty: medium
 
     assert "Mechanism: A synthetic mechanism." in output
     assert "Review date: 2026-12-15" in output
+    assert "Created by: researcher_a (drafted by: agent_signalweave)" in output
     supporting_index = output.index("Supporting evidence:")
     counter_index = output.index("Counter evidence:")
     assert supporting_index < counter_index
+    supporting_section = output[supporting_index:counter_index]
     assert (
-        "A synthetic reviewed observation supports the mechanism."
-        in output[supporting_index:counter_index]
+        "A synthetic reviewed observation supports the mechanism." in supporting_section
     )
+    assert "added by=researcher_a" in supporting_section
+    assert "drafted by=agent_signalweave" in supporting_section
     assert "(none)" in output[counter_index:]
     assert "evt_2026_001" in output
     assert "review_2026_001" in output
@@ -381,6 +416,8 @@ def test_list_threads_marks_overdue_only_from_the_supplied_as_of_date(
                 "--review-date",
                 "2026-12-15",
                 "--created-by",
+                "researcher_a",
+                "--drafted-by",
                 "researcher_a",
                 "--created-at",
                 "2026-09-11T00:00:00+00:00",

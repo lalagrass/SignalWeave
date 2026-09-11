@@ -23,6 +23,7 @@ THREAD_REQUIRED_FIELDS = frozenset(
         "review_date",
         "created_at",
         "created_by",
+        "drafted_by",
     }
 )
 UPDATE_REQUIRED_FIELDS = frozenset(
@@ -36,6 +37,7 @@ UPDATE_REQUIRED_FIELDS = frozenset(
         "date",
         "added_at",
         "added_by",
+        "drafted_by",
     }
 )
 
@@ -46,7 +48,14 @@ class ThreadValidationError(ValueError):
 
 @dataclass(frozen=True)
 class ResearchThread:
-    """A human-authored causal hypothesis awaiting future review."""
+    """A human-owned causal hypothesis awaiting future review.
+
+    `created_by` is the human who accepts and owns the record. `drafted_by`
+    is whoever produced its free text (mechanism, open question,
+    invalidation conditions) — a human id, or an agent identifier when a
+    human has not yet composed that text themselves. The two are tracked
+    separately so a thread can never look human-authored by default.
+    """
 
     thread_id: str
     mechanism: str
@@ -55,6 +64,7 @@ class ResearchThread:
     review_date: date
     created_at: datetime
     created_by: str
+    drafted_by: str
 
     @classmethod
     def from_mapping(cls, record: dict[str, Any]) -> "ResearchThread":
@@ -70,6 +80,7 @@ class ResearchThread:
             review_date=_date(record["review_date"], "review_date"),
             created_at=_datetime(record["created_at"], "created_at"),
             created_by=_identifier(record["created_by"], "created_by"),
+            drafted_by=_identifier(record["drafted_by"], "drafted_by"),
         )
 
     def to_mapping(self) -> dict[str, Any]:
@@ -81,12 +92,18 @@ class ResearchThread:
             "review_date": self.review_date.isoformat(),
             "created_at": self.created_at.isoformat(),
             "created_by": self.created_by,
+            "drafted_by": self.drafted_by,
         }
 
 
 @dataclass(frozen=True)
 class ThreadUpdate:
-    """A dated supporting or counter update linked to a review decision."""
+    """A dated supporting or counter update linked to a review decision.
+
+    `added_by` is the human who accepts and owns the update. `drafted_by` is
+    whoever wrote its free-text `summary` — a human id, or an agent
+    identifier when a human has not yet composed that text themselves.
+    """
 
     update_id: str
     thread_id: str
@@ -97,6 +114,7 @@ class ThreadUpdate:
     date: date
     added_at: datetime
     added_by: str
+    drafted_by: str
 
     @classmethod
     def from_mapping(cls, record: dict[str, Any]) -> "ThreadUpdate":
@@ -116,6 +134,7 @@ class ThreadUpdate:
             date=_date(record["date"], "date"),
             added_at=_datetime(record["added_at"], "added_at"),
             added_by=_identifier(record["added_by"], "added_by"),
+            drafted_by=_identifier(record["drafted_by"], "drafted_by"),
         )
 
     def to_mapping(self) -> dict[str, str]:
@@ -129,6 +148,7 @@ class ThreadUpdate:
             "date": self.date.isoformat(),
             "added_at": self.added_at.isoformat(),
             "added_by": self.added_by,
+            "drafted_by": self.drafted_by,
         }
 
 
@@ -140,9 +160,15 @@ def create_thread(
     invalidation_conditions: list[str],
     review_date: str,
     created_by: str,
+    drafted_by: str,
     created_at: datetime | None = None,
 ) -> ResearchThread:
-    """Create a human-owned hypothesis record."""
+    """Create a human-owned hypothesis record.
+
+    `created_by` and `drafted_by` may be the same id when a human wrote and
+    accepts the record themselves; they must be supplied separately so an
+    agent-drafted record cannot default to looking human-authored.
+    """
     return ResearchThread.from_mapping(
         {
             "thread_id": thread_id,
@@ -152,6 +178,7 @@ def create_thread(
             "review_date": review_date,
             "created_at": (created_at or datetime.now(timezone.utc)).isoformat(),
             "created_by": created_by,
+            "drafted_by": drafted_by,
         }
     )
 
@@ -166,9 +193,15 @@ def create_thread_update(
     summary: str,
     event_date: str,
     added_by: str,
+    drafted_by: str,
     added_at: datetime | None = None,
 ) -> ThreadUpdate:
-    """Create an update only when the review explicitly links the target thread."""
+    """Create an update only when the review explicitly links the target thread.
+
+    `added_by` and `drafted_by` may be the same id when a human wrote and
+    accepts the update themselves; they must be supplied separately so an
+    agent-drafted summary cannot default to looking human-authored.
+    """
     if review.action != "link_to_thread" or review.suggested_thread != thread_id:
         raise ThreadValidationError(
             "review must use link_to_thread and suggest the target thread"
@@ -186,6 +219,7 @@ def create_thread_update(
             "date": event_date,
             "added_at": (added_at or datetime.now(timezone.utc)).isoformat(),
             "added_by": added_by,
+            "drafted_by": drafted_by,
         }
     )
 

@@ -12,7 +12,11 @@ from signalweave.extract import (
     select_segment,
     write_candidate_draft,
 )
-from signalweave.public_check import violations
+from signalweave.public_check import (
+    PublicCheckConfigurationError,
+    require_configuration,
+    violations,
+)
 from signalweave.review import (
     ReviewValidationError,
     create_review,
@@ -35,7 +39,12 @@ from signalweave.threads import (
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="signalweave")
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("public-check")
+    public_check_command = commands.add_parser("public-check")
+    public_check_command.add_argument(
+        "--allow-unconfigured",
+        action="store_true",
+        help="Run without a .signalweave/private_terms.txt (for a genuinely termless repo).",
+    )
     validate_event = commands.add_parser(
         "validate-event", help="Validate a candidate event YAML file."
     )
@@ -68,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     create_thread_command.add_argument("--invalidation-condition", action="append", required=True)
     create_thread_command.add_argument("--review-date", required=True)
     create_thread_command.add_argument("--created-by", required=True)
+    create_thread_command.add_argument("--drafted-by", required=True)
     create_thread_command.add_argument("--created-at")
     append_update = commands.add_parser(
         "append-thread-update", help="Append private evidence to a linked research thread."
@@ -80,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     append_update.add_argument("--summary", required=True)
     append_update.add_argument("--date", required=True, dest="event_date")
     append_update.add_argument("--added-by", required=True)
+    append_update.add_argument("--drafted-by", required=True)
     append_update.add_argument("--added-at")
     draft_event = commands.add_parser(
         "draft-event",
@@ -102,6 +113,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "public-check":
+        try:
+            require_configuration(Path.cwd(), allow_unconfigured=args.allow_unconfigured)
+        except PublicCheckConfigurationError as error:
+            print(f"Publication check not run: {error}")
+            return 1
         problems = violations(Path.cwd())
         if problems:
             print("Publication check failed:")
@@ -168,6 +184,7 @@ def main(argv: list[str] | None = None) -> int:
                 invalidation_conditions=args.invalidation_condition,
                 review_date=args.review_date,
                 created_by=args.created_by,
+                drafted_by=args.drafted_by,
                 created_at=created_at,
             )
             path = write_thread(thread, Path.cwd() / "data" / "private" / "threads")
@@ -189,6 +206,7 @@ def main(argv: list[str] | None = None) -> int:
                 summary=args.summary,
                 event_date=args.event_date,
                 added_by=args.added_by,
+                drafted_by=args.drafted_by,
                 added_at=added_at,
             )
             path = append_thread_update(update, Path.cwd() / "data" / "private" / "threads")
@@ -228,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
         for condition in thread.invalidation_conditions:
             print(f"- {condition}")
         print(f"Review date: {thread.review_date.isoformat()}")
+        print(f"Created by: {thread.created_by} (drafted by: {thread.drafted_by})")
         for heading, role in (("Supporting evidence", "supporting"), ("Counter evidence", "counter")):
             print(f"\n{heading}:")
             role_updates = [update for update in updates if update.evidence_role == role]
@@ -237,7 +256,8 @@ def main(argv: list[str] | None = None) -> int:
             for update in role_updates:
                 print(
                     f"- {update.date.isoformat()} {update.summary} "
-                    f"(event={update.event_id}, review={update.review_id})"
+                    f"(event={update.event_id}, review={update.review_id}, "
+                    f"added by={update.added_by}, drafted by={update.drafted_by})"
                 )
     elif args.command == "list-threads":
         try:

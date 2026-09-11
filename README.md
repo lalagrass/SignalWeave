@@ -27,9 +27,29 @@ Before publishing, run:
 uv run signalweave public-check
 ```
 
-Add organisation- or source-specific terms to the untracked
-`.signalweave/private_terms.txt` (copy the example file first). The command is
-a guardrail, not a substitute for a human review.
+`public-check` refuses to run until `.signalweave/private_terms.txt` exists,
+because a missing file makes the term scan silently check nothing. Set it up
+once per workspace:
+
+```bash
+cp .signalweave/private_terms.example.txt .signalweave/private_terms.txt
+```
+
+Then add organisation- or source-specific terms to that untracked file (one
+per line; it is git-ignored and must never be committed). If a repository
+genuinely has no private terms to configure, pass `--allow-unconfigured` to
+run the check anyway:
+
+```bash
+uv run signalweave public-check --allow-unconfigured
+```
+
+`public-check` also flags any tracked file whose content names a path under
+`data/raw/`, `data/inbox/`, or `data/private/` more specific than the bare
+zone or one of its fixed subfolders (`events/`, `reviews/`, `threads/`,
+`worklog/`) — a locator is itself identifying, so write about these zones in
+tracked docs and tests only in the general terms above, never with a real
+subpath. The command is a guardrail, not a substitute for a human review.
 
 See [the product definition](docs/PRODUCT.md) and [privacy contract](docs/PRIVACY.md).
 

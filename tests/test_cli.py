@@ -59,3 +59,45 @@ def test_transcript_dry_run_never_echoes_private_source_text(tmp_path: Path, cap
     output = capsys.readouterr().out
     assert "2 segments, 0 candidates" in output
     assert "Private source wording" not in output
+
+
+def test_review_event_writes_only_a_private_append_only_record(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    candidate = tmp_path / "candidate.yaml"
+    candidate.write_text(
+        """event_id: evt_2026_001
+source: source_a
+source_locator: doc_2026_001#segment_12
+date: 2026-09-11
+kind: evidence
+summary: A synthetic observation.
+review_status: proposed
+uncertainty: medium
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert (
+        main(
+            [
+                "review-event",
+                str(candidate),
+                "--action",
+                "link_to_thread",
+                "--thread",
+                "thread_supply_constraint",
+                "--reviewer",
+                "researcher_a",
+                "--review-id",
+                "review_2026_001",
+                "--reviewed-at",
+                "2026-09-11T00:00:00+00:00",
+            ]
+        )
+        == 0
+    )
+    record = tmp_path / "data" / "inbox" / "reviews" / "review_2026_001.yaml"
+    assert record.exists()
+    assert "Event review recorded" in capsys.readouterr().out

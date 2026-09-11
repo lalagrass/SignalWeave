@@ -60,6 +60,23 @@ uv run --no-sync signalweave extract-transcript path/to/private.md \
   --dry-run
 ```
 
+## Review a candidate event
+
+Review decisions are immutable private records. They do not modify the candidate
+card or any thread:
+
+```bash
+uv run --no-sync signalweave review-event path/to/candidate.yaml \
+  --action link_to_thread \
+  --thread thread_supply_constraint \
+  --reviewer researcher_a \
+  --review-id review_2026_001
+```
+
+The record is written under ignored `data/inbox/reviews/`. Valid actions are
+`keep_unlinked`, `discard`, and `link_to_thread`; only the last action accepts
+`--thread`.
+
 ## Local setup
 
 ```bash

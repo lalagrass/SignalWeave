@@ -48,7 +48,7 @@ and a review date. It never stores a price-derived verdict.
 | `public_check` | Prevent accidental publication of private material. | shipped |
 | `schema` | Validate candidate event records. | shipped |
 | `extract` | Segment private transcripts and enforce candidate boundaries. | shipped boundary |
-| `review` | Accept, reject, keep unlinked, or link a candidate. | planned |
+| `review` | Append private keep, discard, or suggested-link decisions. | shipped |
 | `threads` | Append reviewed evidence to human-owned hypotheses. | planned |
 | `persona` | Derive evidence-backed research prompts from public corpus. | deferred |
 

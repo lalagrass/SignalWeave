@@ -2,12 +2,13 @@
 
 ## Project state
 
-**Current phase:** 2 — inbox review v0
+**Current phase:** 3 — research threads v0
 
 The development, privacy, and handoff contract is complete. Candidate event
 cards now have a validated schema and CLI. Private transcripts can be segmented
-in memory through a model-independent dry-run boundary. No review workflow or
-reviewed research records have been implemented yet.
+in memory through a model-independent dry-run boundary. Candidate reviews are
+now recorded as private, append-only decisions. No research threads or reviewed
+research records have been implemented yet.
 
 **Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
 `uv run --no-sync pytest`, and
@@ -34,42 +35,43 @@ proposer protocol, and no-write CLI dry-run are implemented. The boundary
 enforces the original segment locator and `proposed` review status for every
 candidate it receives.
 
-## Now: inbox review v0
+## Completed: inbox review v0
+
+Reviewers can append private `keep_unlinked`, `discard`, or `link_to_thread`
+records. A link is only a suggestion; it cannot mutate a thread. The CLI never
+overwrites a review record.
+
+## Now: research threads v0
 
 **Status:** next implementation item
 
-**Goal:** Let a reviewer explicitly keep, discard, or link a validated private
-candidate event without mutating source content or a thread directly.
+**Goal:** Create human-owned, append-only hypothesis threads that can receive
+reviewed supporting and counter evidence.
 
 **Planned files:**
 
-- `src/signalweave/extract.py`
-- `src/signalweave/review.py`
+- `src/signalweave/threads.py`
 - `src/signalweave/cli.py`
-- `tests/test_extract.py`
-- `tests/test_review.py`
+- `tests/test_threads.py`
 
 **Acceptance criteria:**
 
-- Only explicit reviewer actions may change a candidate's review state.
-- Linking records a suggested thread identifier but does not merge or mutate a
-  thread.
-- Review output remains private until a separate de-identification step exists.
+- A thread requires a human-written mechanism, open question, invalidation
+  condition, and review date.
+- Updates append dated supporting or counter evidence without altering older
+  entries.
+- A thread update can cite an event and review record, but never copies raw
+  source text.
 - Tests use only synthetic source material.
 - The documented verification commands pass.
 
 **Out of scope:** AI provider integration, reviewed-record publishing, thread
-merging, and persona extraction.
+merging, market verdicts, and persona extraction.
 
-## Next: inbox review v0
+## Next: reviewed event promotion v0
 
-Accept, reject, keep unlinked, or suggest a link to an existing thread. Review
-must be explicit and append-only.
-
-## Later: threads v0
-
-Add reviewed events as dated supporting or counter evidence, with open
-questions, invalidation conditions, and review dates.
+Introduce a de-identification step that promotes a reviewed candidate into a
+safe tracked event record without copying raw source content.
 
 ## Deferred: research persona v0.1
 

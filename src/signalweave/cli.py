@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+from datetime import date
 from pathlib import Path
 
+from signalweave.extract import NoopCandidateProposer, extract_candidates, segment_transcript
 from signalweave.public_check import violations
 from signalweave.schema import EventValidationError, load_candidate_event
 
@@ -15,6 +17,15 @@ def main(argv: list[str] | None = None) -> int:
         "validate-event", help="Validate a candidate event YAML file."
     )
     validate_event.add_argument("path", type=Path)
+    extract_transcript = commands.add_parser(
+        "extract-transcript",
+        help="Segment a private transcript and report a no-write extraction dry run.",
+    )
+    extract_transcript.add_argument("path", type=Path)
+    extract_transcript.add_argument("--source", required=True)
+    extract_transcript.add_argument("--document-id", required=True)
+    extract_transcript.add_argument("--date", required=True, dest="event_date")
+    extract_transcript.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
 
     if args.command == "public-check":
@@ -31,6 +42,22 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Event validation failed: {error}")
             return 1
         print(f"Event validation passed: {event.event_id}")
+    elif args.command == "extract-transcript":
+        if not args.dry_run:
+            print("Extraction requires --dry-run until a reviewed proposer is configured.")
+            return 1
+        try:
+            date.fromisoformat(args.event_date)
+            segments = segment_transcript(
+                args.path.read_text(encoding="utf-8"),
+                source=args.source,
+                document_id=args.document_id,
+            )
+            candidates = extract_candidates(segments, NoopCandidateProposer())
+        except (EventValidationError, OSError, UnicodeDecodeError, ValueError) as error:
+            print(f"Transcript dry run failed: {error}")
+            return 1
+        print(f"Transcript dry run: {len(segments)} segments, {len(candidates)} candidates.")
     return 0
 
 

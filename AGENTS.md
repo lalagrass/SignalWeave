@@ -12,7 +12,8 @@ automatic truth classifier.
 - Raw inputs belong in `data/raw/`; candidate work belongs in `data/inbox/`;
   both are Git-ignored.
 - Use neutral source identifiers and locators in tracked examples and tests.
-- Before a handoff or release, run `uv sync --no-editable`, then
+- Before a handoff or release, run
+  `uv sync --no-editable --reinstall-package signalweave`, then
   `uv run --no-sync pytest` and `uv run --no-sync signalweave public-check`.
 
 ## Research boundary

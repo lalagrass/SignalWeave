@@ -2,13 +2,15 @@
 
 ## Project state
 
-**Current phase:** 1 — transcript extraction v0
+**Current phase:** 2 — inbox review v0
 
 The development, privacy, and handoff contract is complete. Candidate event
-cards now have a validated schema and CLI. No extractor, review workflow, or
+cards now have a validated schema and CLI. Private transcripts can be segmented
+in memory through a model-independent dry-run boundary. No review workflow or
 reviewed research records have been implemented yet.
 
-**Last verified:** `uv sync --no-editable`, `uv run --no-sync pytest`, and
+**Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
+`uv run --no-sync pytest`, and
 `uv run --no-sync signalweave public-check` passed on 2026-09-11.
 
 ## Completed: candidate event schema v0
@@ -25,32 +27,39 @@ uv run --no-sync signalweave validate-event examples/event-card.example.yaml
 uv run --no-sync signalweave public-check
 ```
 
-## Now: transcript extraction v0
+## Completed: transcript extraction boundary v0
+
+Private transcript segmentation, stable local locators, a model-independent
+proposer protocol, and no-write CLI dry-run are implemented. The boundary
+enforces the original segment locator and `proposed` review status for every
+candidate it receives.
+
+## Now: inbox review v0
 
 **Status:** next implementation item
 
-**Goal:** Turn one transcript into private, human-reviewable candidate event
-cards without inspecting or publishing source text outside the private data
-zone.
+**Goal:** Let a reviewer explicitly keep, discard, or link a validated private
+candidate event without mutating source content or a thread directly.
 
 **Planned files:**
 
 - `src/signalweave/extract.py`
+- `src/signalweave/review.py`
 - `src/signalweave/cli.py`
 - `tests/test_extract.py`
+- `tests/test_review.py`
 
 **Acceptance criteria:**
 
-- Synthetic transcript segments can be supplied through a private input
-  interface without exposing their text in tracked output.
-- The extractor returns only `proposed` candidate events and always includes a
-  locator and uncertainty.
-- The extractor may return no candidates when no segment meets its threshold.
+- Only explicit reviewer actions may change a candidate's review state.
+- Linking records a suggested thread identifier but does not merge or mutate a
+  thread.
+- Review output remains private until a separate de-identification step exists.
 - Tests use only synthetic source material.
 - The documented verification commands pass.
 
-**Out of scope:** AI provider integration, automatic review, thread merging,
-and persona extraction.
+**Out of scope:** AI provider integration, reviewed-record publishing, thread
+merging, and persona extraction.
 
 ## Next: inbox review v0
 

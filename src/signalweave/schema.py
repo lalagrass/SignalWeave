@@ -31,6 +31,10 @@ REQUIRED_FIELDS = frozenset(
         "uncertainty",
     }
 )
+OPTIONAL_FIELDS = frozenset(
+    {"claims", "mechanisms", "counterarguments", "candidate_threads"}
+)
+ALLOWED_FIELDS = REQUIRED_FIELDS | OPTIONAL_FIELDS
 
 
 @dataclass(frozen=True)
@@ -55,6 +59,9 @@ class CandidateEvent:
         missing = sorted(REQUIRED_FIELDS - record.keys())
         if missing:
             raise EventValidationError(f"missing required field(s): {', '.join(missing)}")
+        unknown = sorted(record.keys() - ALLOWED_FIELDS)
+        if unknown:
+            raise EventValidationError(f"unknown field(s): {', '.join(unknown)}")
 
         event_id = _identifier(record["event_id"], "event_id")
         source = _identifier(record["source"], "source")

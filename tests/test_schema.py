@@ -65,3 +65,11 @@ def test_candidate_event_rejects_non_identifier_thread_links() -> None:
 
     with pytest.raises(EventValidationError, match="candidate_threads"):
         CandidateEvent.from_mapping(record)
+
+
+def test_candidate_event_rejects_uncontracted_fields() -> None:
+    record = valid_record()
+    record["raw_text"] = "This field must never reach a candidate event card."
+
+    with pytest.raises(EventValidationError, match="unknown field"):
+        CandidateEvent.from_mapping(record)

@@ -46,14 +46,28 @@ Validation checks the required fields, controlled values, source locator, and
 review gate. It does not inspect source material, create a thread, or accept a
 candidate on a reviewer's behalf.
 
+## Dry-run a transcript extraction
+
+The first extraction boundary only segments a private file in memory and reports
+counts; it never echoes source text or writes event cards. A proposer must be
+configured in a later sprint before the command can create private inbox data.
+
+```bash
+uv run --no-sync signalweave extract-transcript path/to/private.md \
+  --source source_a \
+  --document-id doc_2026_001 \
+  --date 2026-09-11 \
+  --dry-run
+```
+
 ## Local setup
 
 ```bash
-uv sync --no-editable
+uv sync --no-editable --reinstall-package signalweave
 uv run --no-sync pytest
 uv run --no-sync signalweave public-check
 ```
 
 `--no-editable` keeps the command-line package importable in the current
-workspace environment. Re-run the sync command after changing source files or
-project metadata.
+workspace environment. `--reinstall-package signalweave` ensures the CLI uses
+the current source after a code change.

@@ -221,6 +221,48 @@ def append_thread_update(update: ThreadUpdate, threads_directory: Path) -> Path:
     return path
 
 
+def list_thread_ids(threads_directory: Path) -> tuple[str, ...]:
+    """Return the ids of every private thread, sorted for deterministic output."""
+    if not threads_directory.is_dir():
+        return ()
+    return tuple(
+        sorted(
+            entry.name
+            for entry in threads_directory.iterdir()
+            if entry.is_dir() and (entry / "thread.yaml").is_file()
+        )
+    )
+
+
+def load_thread(thread_directory: Path) -> ResearchThread:
+    """Load one private thread header without changing it."""
+    path = thread_directory / "thread.yaml"
+    try:
+        record = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as error:
+        raise ThreadValidationError(f"invalid YAML in {path}: {error}") from error
+    if not isinstance(record, dict):
+        raise ThreadValidationError("thread record must be a YAML mapping")
+    return ResearchThread.from_mapping(record)
+
+
+def load_thread_updates(thread_directory: Path) -> tuple[ThreadUpdate, ...]:
+    """Load every update for one thread, ordered by date then update_id."""
+    updates_directory = thread_directory / "updates"
+    if not updates_directory.is_dir():
+        return ()
+    updates: list[ThreadUpdate] = []
+    for path in sorted(updates_directory.glob("*.yaml")):
+        try:
+            record = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as error:
+            raise ThreadValidationError(f"invalid YAML in {path}: {error}") from error
+        if not isinstance(record, dict):
+            raise ThreadValidationError(f"thread update record must be a YAML mapping: {path}")
+        updates.append(ThreadUpdate.from_mapping(record))
+    return tuple(sorted(updates, key=lambda update: (update.date, update.update_id)))
+
+
 def _require_exact_fields(record: dict[str, Any], required: frozenset[str], label: str) -> None:
     missing = sorted(required - record.keys())
     if missing:

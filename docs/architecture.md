@@ -7,10 +7,14 @@ interpretation so that each research claim can be revisited without exposing
 the original source.
 
 ```text
-data/raw/ → extraction → data/inbox/ → human review → data/reviewed/
-                                                   ├── events/
-                                                   └── threads/
+data/raw/ → extraction → data/inbox/ → human review → data/private/threads/
+                                                   (private, append-only hypothesis threads)
 ```
+
+A thread is private until a promotion step exists to de-identify it. A later
+promotion item introduces a tracked `data/reviewed/events/` for de-identified
+candidates, and an equivalent later item would be needed before any
+`data/reviewed/threads/` could exist.
 
 ## Storage zones
 
@@ -18,9 +22,8 @@ data/raw/ → extraction → data/inbox/ → human review → data/reviewed/
 | --- | --- | --- |
 | `data/raw/` | ignored | Original transcripts and observed posts. |
 | `data/inbox/` | ignored | Candidate event cards that still need review. |
-| `data/private/` | ignored | Identity maps, private annotations, and worklogs. |
-| `data/reviewed/events/` | tracked when safe | De-identified, accepted observations. |
-| `data/reviewed/threads/` | tracked when safe | Append-only hypothesis updates. |
+| `data/private/` | ignored | Identity maps, private annotations, worklogs, and private research threads with their updates. |
+| `data/reviewed/events/` | tracked when safe | Not yet implemented; de-identified, accepted observations, introduced by reviewed-event promotion v0. |
 
 ## Records
 
@@ -49,7 +52,7 @@ and a review date. It never stores a price-derived verdict.
 | `schema` | Validate candidate event records. | shipped |
 | `extract` | Segment private transcripts and enforce candidate boundaries. | shipped boundary |
 | `review` | Append private keep, discard, or suggested-link decisions. | shipped |
-| `threads` | Append reviewed evidence to human-owned hypotheses. | planned |
+| `threads` | Append reviewed evidence to human-owned hypotheses. | shipped |
 | `persona` | Derive evidence-backed research prompts from public corpus. | deferred |
 
 ## AI boundary

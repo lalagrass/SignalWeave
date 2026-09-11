@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 import re
 from typing import Any, Protocol
+
+import yaml
 
 from signalweave.schema import CandidateEvent, EventValidationError, IDENTIFIER
 
@@ -84,6 +87,53 @@ def extract_candidates(
             record["review_status"] = "proposed"
             candidates.append(CandidateEvent.from_mapping(record))
     return tuple(candidates)
+
+
+def select_segment(segments: tuple[TranscriptSegment, ...], position: int) -> TranscriptSegment:
+    """Return the segment at a 1-indexed position without exposing any text."""
+    if not segments:
+        raise EventValidationError("no segments are available to draft from")
+    if not (1 <= position <= len(segments)):
+        raise EventValidationError(f"segment position must be between 1 and {len(segments)}")
+    return segments[position - 1]
+
+
+def draft_candidate_event(
+    segment: TranscriptSegment, *, event_id: str, event_date: str
+) -> dict[str, Any]:
+    """Build a candidate skeleton that carries only machine-known fields.
+
+    The human-owned fields are emitted empty so `validate-event` fails until a
+    reviewer fills them in; no segment text is ever placed in the result.
+    """
+    _validate_identifier(event_id, "event_id")
+    return {
+        "event_id": event_id,
+        "source": segment.source,
+        "source_locator": segment.source_locator,
+        "date": event_date,
+        "kind": "",
+        "summary": "",
+        "uncertainty": "",
+        "review_status": "proposed",
+        "claims": [],
+        "mechanisms": [],
+        "counterarguments": [],
+        "candidate_threads": [],
+    }
+
+
+def write_candidate_draft(record: Mapping[str, Any], inbox_directory: Path) -> Path:
+    """Write a candidate draft skeleton without overwriting an existing card."""
+    inbox_directory.mkdir(parents=True, exist_ok=True)
+    path = inbox_directory / f"{record['event_id']}.yaml"
+    if path.exists():
+        raise FileExistsError(f"candidate event already exists: {path}")
+    path.write_text(
+        yaml.safe_dump(dict(record), allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+    return path
 
 
 def _validate_identifier(value: str, field: str) -> None:

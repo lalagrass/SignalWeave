@@ -4,7 +4,14 @@ import argparse
 from datetime import date, datetime
 from pathlib import Path
 
-from signalweave.extract import NoopCandidateProposer, extract_candidates, segment_transcript
+from signalweave.extract import (
+    NoopCandidateProposer,
+    draft_candidate_event,
+    extract_candidates,
+    segment_transcript,
+    select_segment,
+    write_candidate_draft,
+)
 from signalweave.public_check import violations
 from signalweave.review import (
     ReviewValidationError,
@@ -18,6 +25,9 @@ from signalweave.threads import (
     append_thread_update,
     create_thread,
     create_thread_update,
+    list_thread_ids,
+    load_thread,
+    load_thread_updates,
     write_thread,
 )
 
@@ -71,6 +81,24 @@ def main(argv: list[str] | None = None) -> int:
     append_update.add_argument("--date", required=True, dest="event_date")
     append_update.add_argument("--added-by", required=True)
     append_update.add_argument("--added-at")
+    draft_event = commands.add_parser(
+        "draft-event",
+        help="Write a pre-filled candidate card skeleton into the private inbox.",
+    )
+    draft_event.add_argument("path", type=Path)
+    draft_event.add_argument("--source", required=True)
+    draft_event.add_argument("--document-id", required=True)
+    draft_event.add_argument("--date", required=True, dest="event_date")
+    draft_event.add_argument("--segment", required=True, type=int, dest="segment_position")
+    draft_event.add_argument("--event-id", required=True)
+    show_thread = commands.add_parser(
+        "show-thread", help="Print a private thread's header and its updates."
+    )
+    show_thread.add_argument("thread_id")
+    list_threads_command = commands.add_parser(
+        "list-threads", help="List private threads and mark those overdue as of a given date."
+    )
+    list_threads_command.add_argument("--as-of", required=True, dest="as_of")
     args = parser.parse_args(argv)
 
     if args.command == "public-check":
@@ -168,6 +196,67 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Thread update failed: {error}")
             return 1
         print(f"Thread update recorded: {path}")
+    elif args.command == "draft-event":
+        try:
+            date.fromisoformat(args.event_date)
+            segments = segment_transcript(
+                args.path.read_text(encoding="utf-8"),
+                source=args.source,
+                document_id=args.document_id,
+            )
+            segment = select_segment(segments, args.segment_position)
+            record = draft_candidate_event(
+                segment, event_id=args.event_id, event_date=args.event_date
+            )
+            path = write_candidate_draft(record, Path.cwd() / "data" / "inbox" / "events")
+        except (EventValidationError, OSError, UnicodeDecodeError, ValueError) as error:
+            print(f"Draft event failed: {error}")
+            return 1
+        print(f"Candidate draft written: {path}")
+    elif args.command == "show-thread":
+        try:
+            thread_directory = Path.cwd() / "data" / "private" / "threads" / args.thread_id
+            thread = load_thread(thread_directory)
+            updates = load_thread_updates(thread_directory)
+        except (ThreadValidationError, OSError, UnicodeDecodeError, ValueError) as error:
+            print(f"Show thread failed: {error}")
+            return 1
+        print(f"Thread: {thread.thread_id}")
+        print(f"Mechanism: {thread.mechanism}")
+        print(f"Open question: {thread.open_question}")
+        print("Invalidation conditions:")
+        for condition in thread.invalidation_conditions:
+            print(f"- {condition}")
+        print(f"Review date: {thread.review_date.isoformat()}")
+        for heading, role in (("Supporting evidence", "supporting"), ("Counter evidence", "counter")):
+            print(f"\n{heading}:")
+            role_updates = [update for update in updates if update.evidence_role == role]
+            if not role_updates:
+                print("(none)")
+                continue
+            for update in role_updates:
+                print(
+                    f"- {update.date.isoformat()} {update.summary} "
+                    f"(event={update.event_id}, review={update.review_id})"
+                )
+    elif args.command == "list-threads":
+        try:
+            as_of = date.fromisoformat(args.as_of)
+            threads_directory = Path.cwd() / "data" / "private" / "threads"
+            lines = []
+            for thread_id in list_thread_ids(threads_directory):
+                thread_directory = threads_directory / thread_id
+                thread = load_thread(thread_directory)
+                updates = load_thread_updates(thread_directory)
+                overdue = " OVERDUE" if thread.review_date < as_of else ""
+                lines.append(
+                    f"{thread.thread_id} review_date={thread.review_date.isoformat()} "
+                    f"updates={len(updates)}{overdue}"
+                )
+        except (ThreadValidationError, OSError, UnicodeDecodeError, ValueError) as error:
+            print(f"List threads failed: {error}")
+            return 1
+        print("\n".join(lines) if lines else "No threads found.")
     return 0
 
 

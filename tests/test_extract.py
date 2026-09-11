@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from signalweave.extract import (
     NoopCandidateProposer,
     TranscriptSegment,
+    draft_candidate_event,
     extract_candidates,
     segment_transcript,
+    select_segment,
+    write_candidate_draft,
 )
 from signalweave.schema import EventValidationError
 
@@ -78,3 +83,59 @@ def test_noop_proposer_emits_no_candidates() -> None:
     segment = TranscriptSegment("source_a", "doc_2026_001#segment_1", 1, "Synthetic text")
 
     assert extract_candidates((segment,), NoopCandidateProposer()) == ()
+
+
+def test_select_segment_rejects_out_of_range_position_without_naming_text() -> None:
+    segments = segment_transcript(
+        "First synthetic paragraph is long enough to be a segment.\n\n"
+        "Second synthetic paragraph is also long enough to be a segment.",
+        source="source_a",
+        document_id="doc_2026_001",
+    )
+
+    with pytest.raises(EventValidationError, match=r"between 1 and 2") as excinfo:
+        select_segment(segments, 12)
+    assert "synthetic" not in str(excinfo.value).lower()
+
+
+def test_select_segment_rejects_position_when_no_segments_exist() -> None:
+    with pytest.raises(EventValidationError, match="no segments are available"):
+        select_segment((), 1)
+
+
+def test_draft_candidate_event_carries_only_machine_known_fields() -> None:
+    segment = TranscriptSegment(
+        source="source_a",
+        source_locator="doc_2026_001#segment_12",
+        position=12,
+        text="Synthetic private text that must never reach the draft.",
+    )
+
+    record = draft_candidate_event(segment, event_id="evt_2026_001", event_date="2026-09-11")
+
+    assert record == {
+        "event_id": "evt_2026_001",
+        "source": "source_a",
+        "source_locator": "doc_2026_001#segment_12",
+        "date": "2026-09-11",
+        "kind": "",
+        "summary": "",
+        "uncertainty": "",
+        "review_status": "proposed",
+        "claims": [],
+        "mechanisms": [],
+        "counterarguments": [],
+        "candidate_threads": [],
+    }
+    assert "Synthetic private text" not in yaml.safe_dump(record)
+
+
+def test_write_candidate_draft_refuses_to_overwrite(tmp_path: Path) -> None:
+    record = {"event_id": "evt_2026_001", "source": "source_a"}
+    inbox = tmp_path / "data" / "inbox" / "events"
+
+    path = write_candidate_draft(record, inbox)
+
+    assert path == inbox / "evt_2026_001.yaml"
+    with pytest.raises(FileExistsError, match="already exists"):
+        write_candidate_draft(record, inbox)

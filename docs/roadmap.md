@@ -2,18 +2,20 @@
 
 ## Project state
 
-**Current phase:** 4 — first walkthrough v0
+**Current phase:** 5 — reviewed event promotion v0
 
 The development, privacy, and handoff contract is complete. Candidate event
-cards now have a validated schema and CLI. Private transcripts can be segmented
-in memory through a model-independent dry-run boundary. Candidate reviews are
+cards have a validated schema and CLI. Private transcripts can be segmented in
+memory through a model-independent dry-run boundary. Candidate reviews are
 recorded as private, append-only decisions. Research threads and their updates
-are implemented and awaiting verification. The loop has never been run once on
-a real document: no proposer fills the inbox, and no command displays a thread.
+are implemented and verified. The loop has been closed end to end and run once
+on a real private document: a candidate can be hand-drafted from a segment
+locator, reviewed, linked into a thread, and the resulting thread read back
+from the command line.
 
 **Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
-`uv run --no-sync pytest`, and
-`uv run --no-sync signalweave public-check` passed on 2026-09-11.
+`uv run --no-sync pytest` (45 passed), and
+`uv run --no-sync signalweave public-check` passed on 2026-09-12.
 
 ## Completed: candidate event schema v0
 
@@ -42,56 +44,61 @@ Reviewers can append private `keep_unlinked`, `discard`, or `link_to_thread`
 records. A link is only a suggestion; it cannot mutate a thread. The CLI never
 overwrites a review record.
 
-## Implemented, pending verification: research threads v0
+## Completed: research threads v0
 
 Human-owned threads require a mechanism, open question, invalidation conditions,
 and a review date. Updates are separate dated files under
 `data/private/threads/<thread_id>/updates/`. An update can only be created from a
 `link_to_thread` review whose `event_id` matches, and neither a thread nor an
-update can be overwritten.
+update can be overwritten. Verified and committed on 2026-09-12.
 
-Before this item is marked complete, run the documented verification commands on
-a machine with a working environment and commit the working tree.
+## Completed: first walkthrough v0
 
-## Now: first walkthrough v0
+`draft-event` writes a candidate skeleton into `data/inbox/events/` carrying the
+segment's own locator and no source-derived text; it fails validation until a
+human writes `kind`, `summary`, and `uncertainty`. `show-thread` prints a
+thread's header and its dated updates with supporting and counter evidence
+under separate headings, drawing no conclusion from their balance.
+`list-threads --as-of <date>` marks a thread overdue from the supplied date
+only, computed without ever calling the wall clock. `docs/architecture.md` now
+records threads as private (`data/private/threads/`) until a promotion step
+exists.
 
-**Status:** next implementation item. Full contract in
-`docs/specs/first-walkthrough-v0.md`.
+One timed walkthrough was run on one real private document, held locally
+under an ignored path and referred to here only as `source_a`/`doc_2026_101`:
+import → draft → fill → validate → review
+with `link_to_thread` → create thread → append update → `show-thread`. The
+back-to-back command sequence took about 35 seconds; the reviewer's own
+free-text judgment calls (summary, mechanism, open question, invalidation
+conditions) are not part of that measurement. Friction notes are in ignored
+`data/private/worklog/2026-09-12-first-walkthrough.md`; none of them blocked
+completion. The ten-minute success criterion is therefore *not* yet
+verified: in this run the free-text fields were written by the implementing
+agent rather than by a reviewer reading the document, so what was measured is
+the mechanical command sequence, not the human loop. Durable
+design choices are recorded in
+[ADR-0005](decisions/ADR-0005-manual-drafting-and-deterministic-readback.md).
 
-**Goal:** Make the documented success criterion executable — one real private
-document turned into a visible thread update in ten minutes.
+Verification passed:
 
-**Planned files:**
+```text
+uv sync --no-editable --reinstall-package signalweave
+uv run --no-sync pytest        # 45 passed
+uv run --no-sync signalweave public-check
+```
 
-- `src/signalweave/cli.py`
-- `src/signalweave/extract.py`
-- `tests/test_cli.py`
-- `docs/architecture.md`
+## Now: reviewed event promotion v0
 
-**Acceptance criteria:**
+**Status:** next implementation item.
 
-- `draft-event` writes a candidate skeleton into `data/inbox/events/` carrying the
-  segment's own locator and no source-derived text, and fails validation until a
-  human writes `kind`, `summary`, and `uncertainty`.
-- `show-thread` prints a thread's header and its dated updates with supporting and
-  counter evidence under separate headings, and draws no conclusion from their
-  balance.
-- `list-threads --as-of <date>` marks a thread overdue from the supplied date only,
-  never from the wall clock.
-- `docs/architecture.md` records threads as private until a promotion step exists.
-- One timed walkthrough is performed on a real document; friction notes go to
-  ignored `data/private/worklog/`.
-- The documented verification commands pass.
+**Goal:** Introduce a de-identification step that promotes a reviewed candidate
+into a safe tracked event record without copying raw source content.
+Deliberately sequenced after the first walkthrough: the de-identification
+rules should be designed against the real candidate and review records that
+now exist in `data/inbox/` rather than imagined ones.
 
-**Out of scope:** AI provider integration, research persona, reviewed-record
-publishing, thread merging, update editing, and market verdicts.
-
-## Next: reviewed event promotion v0
-
-Introduce a de-identification step that promotes a reviewed candidate into a safe
-tracked event record without copying raw source content. Deliberately sequenced
-after the first walkthrough: the de-identification rules should be designed against
-real cards rather than imagined ones.
+**Out of scope:** AI provider integration, research persona, thread promotion
+or merging, market verdicts.
 
 ## Deferred: research persona v0.1
 

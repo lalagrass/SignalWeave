@@ -101,3 +101,34 @@ uncertainty: medium
     record = tmp_path / "data" / "inbox" / "reviews" / "review_2026_001.yaml"
     assert record.exists()
     assert "Event review recorded" in capsys.readouterr().out
+
+
+def test_create_thread_writes_only_a_private_thread(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert (
+        main(
+            [
+                "create-thread",
+                "--thread-id",
+                "thread_supply_constraint",
+                "--mechanism",
+                "A synthetic mechanism.",
+                "--open-question",
+                "A synthetic question?",
+                "--invalidation-condition",
+                "A synthetic invalidation condition.",
+                "--review-date",
+                "2026-12-15",
+                "--created-by",
+                "researcher_a",
+                "--created-at",
+                "2026-09-11T00:00:00+00:00",
+            ]
+        )
+        == 0
+    )
+
+    record = tmp_path / "data" / "private" / "threads" / "thread_supply_constraint" / "thread.yaml"
+    assert record.exists()
+    assert "Thread created" in capsys.readouterr().out

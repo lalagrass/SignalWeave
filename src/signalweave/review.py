@@ -123,6 +123,17 @@ def write_review(record: ReviewRecord, reviews_directory: Path) -> Path:
     return path
 
 
+def load_review(path: Path) -> ReviewRecord:
+    """Load one private review record without changing it."""
+    try:
+        record = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as error:
+        raise ReviewValidationError(f"invalid YAML in {path}: {error}") from error
+    if not isinstance(record, dict):
+        raise ReviewValidationError("review record must be a YAML mapping")
+    return ReviewRecord.from_mapping(record)
+
+
 def _identifier(value: Any, field: str) -> str:
     if not isinstance(value, str) or not IDENTIFIER.fullmatch(value):
         raise ReviewValidationError(

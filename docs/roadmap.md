@@ -2,13 +2,14 @@
 
 ## Project state
 
-**Current phase:** 3 — research threads v0
+**Current phase:** 4 — first walkthrough v0
 
 The development, privacy, and handoff contract is complete. Candidate event
 cards now have a validated schema and CLI. Private transcripts can be segmented
 in memory through a model-independent dry-run boundary. Candidate reviews are
-now recorded as private, append-only decisions. No research threads or reviewed
-research records have been implemented yet.
+recorded as private, append-only decisions. Research threads and their updates
+are implemented and awaiting verification. The loop has never been run once on
+a real document: no proposer fills the inbox, and no command displays a thread.
 
 **Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
 `uv run --no-sync pytest`, and
@@ -41,37 +42,56 @@ Reviewers can append private `keep_unlinked`, `discard`, or `link_to_thread`
 records. A link is only a suggestion; it cannot mutate a thread. The CLI never
 overwrites a review record.
 
-## Now: research threads v0
+## Implemented, pending verification: research threads v0
 
-**Status:** next implementation item
+Human-owned threads require a mechanism, open question, invalidation conditions,
+and a review date. Updates are separate dated files under
+`data/private/threads/<thread_id>/updates/`. An update can only be created from a
+`link_to_thread` review whose `event_id` matches, and neither a thread nor an
+update can be overwritten.
 
-**Goal:** Create human-owned, append-only hypothesis threads that can receive
-reviewed supporting and counter evidence.
+Before this item is marked complete, run the documented verification commands on
+a machine with a working environment and commit the working tree.
+
+## Now: first walkthrough v0
+
+**Status:** next implementation item. Full contract in
+`docs/specs/first-walkthrough-v0.md`.
+
+**Goal:** Make the documented success criterion executable — one real private
+document turned into a visible thread update in ten minutes.
 
 **Planned files:**
 
-- `src/signalweave/threads.py`
 - `src/signalweave/cli.py`
-- `tests/test_threads.py`
+- `src/signalweave/extract.py`
+- `tests/test_cli.py`
+- `docs/architecture.md`
 
 **Acceptance criteria:**
 
-- A thread requires a human-written mechanism, open question, invalidation
-  condition, and review date.
-- Updates append dated supporting or counter evidence without altering older
-  entries.
-- A thread update can cite an event and review record, but never copies raw
-  source text.
-- Tests use only synthetic source material.
+- `draft-event` writes a candidate skeleton into `data/inbox/events/` carrying the
+  segment's own locator and no source-derived text, and fails validation until a
+  human writes `kind`, `summary`, and `uncertainty`.
+- `show-thread` prints a thread's header and its dated updates with supporting and
+  counter evidence under separate headings, and draws no conclusion from their
+  balance.
+- `list-threads --as-of <date>` marks a thread overdue from the supplied date only,
+  never from the wall clock.
+- `docs/architecture.md` records threads as private until a promotion step exists.
+- One timed walkthrough is performed on a real document; friction notes go to
+  ignored `data/private/worklog/`.
 - The documented verification commands pass.
 
-**Out of scope:** AI provider integration, reviewed-record publishing, thread
-merging, market verdicts, and persona extraction.
+**Out of scope:** AI provider integration, research persona, reviewed-record
+publishing, thread merging, update editing, and market verdicts.
 
 ## Next: reviewed event promotion v0
 
-Introduce a de-identification step that promotes a reviewed candidate into a
-safe tracked event record without copying raw source content.
+Introduce a de-identification step that promotes a reviewed candidate into a safe
+tracked event record without copying raw source content. Deliberately sequenced
+after the first walkthrough: the de-identification rules should be designed against
+real cards rather than imagined ones.
 
 ## Deferred: research persona v0.1
 

@@ -131,15 +131,21 @@ instruments they implicate. Two code items, then a deliberate pause.
 one-paragraph post.
 
 - `list-segments` prints position, locator, and character count — never text.
-- A PO decision on narrowing ADR-0003's no-echo rule for an explicit,
-  human-invoked terminal print; implemented as `--show` if accepted, dropped
-  entirely if not. No middle option.
+- ADR-0003's no-echo rule is narrowed — decided, not open. `--show` on
+  `list-segments` and `draft-event` prints only the one selected segment, only
+  to an interactive terminal, and refuses when stdout is not a TTY. Source
+  text may never reach a file, an error message, a log line, redirected or
+  piped output, or a proposer. Codified in a new ADR-0008; ADR-0003 is not
+  edited in place.
 - Three friction fixes from the first walkthrough: `--review-id` lookup,
   early validation of an unknown `--thread`, repeatable flags documented.
 
-**Acceptance:** one real transcript run end to end by the reviewer — at least
-three cards, one thread, two updates — with `drafted_by` recording that a human
-wrote the free text. This is the first real test of the ten-minute criterion.
+**Acceptance:** the documented verification commands pass, exercised against
+synthetic transcript fixtures only. The first real transcript run — at least
+three cards, one thread, two updates, `drafted_by` recording that a human
+wrote the free text — is the PO's own walkthrough, run separately after this
+ships. It is the first real test of the ten-minute criterion, not a gate on
+this item's completion.
 
 ## Next: thread exposure v0
 

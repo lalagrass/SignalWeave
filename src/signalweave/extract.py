@@ -77,15 +77,33 @@ def segment_transcript(
 def extract_candidates(
     segments: Iterable[TranscriptSegment], proposer: CandidateProposer
 ) -> tuple[CandidateEvent, ...]:
-    """Validate candidate proposals while enforcing source and review boundaries."""
+    """Validate candidate proposals while enforcing source and review boundaries.
+
+    `source`, `source_locator`, and `review_status` are overwritten regardless
+    of what the proposer supplies, so a proposer can never place itself in a
+    different source or self-stamp anything other than `unreviewed`
+    (ADR-0008 — the pass-through gate, not a proposer's own claim, decides
+    that). `drafted_by` and `run_id` are left as the proposer set them: only
+    the proposer knows which model or run actually produced the text.
+
+    The only content check performed here is mechanical (ADR-0008): the
+    `cited_span` a proposal names must verifiably exist in the segment it was
+    drawn from. A proposal that fails this check raises rather than being
+    silently dropped, so the caller decides how to handle it per segment.
+    """
     candidates: list[CandidateEvent] = []
     for segment in segments:
         for proposal in proposer.propose(segment):
             record = dict(proposal)
             record["source"] = segment.source
             record["source_locator"] = segment.source_locator
-            record["review_status"] = "proposed"
-            candidates.append(CandidateEvent.from_mapping(record))
+            record["review_status"] = "unreviewed"
+            candidate = CandidateEvent.from_mapping(record)
+            if candidate.cited_span not in segment.text:
+                raise EventValidationError(
+                    "cited_span does not verifiably exist in its source segment"
+                )
+            candidates.append(candidate)
     return tuple(candidates)
 
 
@@ -99,14 +117,19 @@ def select_segment(segments: tuple[TranscriptSegment, ...], position: int) -> Tr
 
 
 def draft_candidate_event(
-    segment: TranscriptSegment, *, event_id: str, event_date: str
+    segment: TranscriptSegment, *, event_id: str, event_date: str, drafted_by: str
 ) -> dict[str, Any]:
     """Build a candidate skeleton that carries only machine-known fields.
 
-    The human-owned fields are emitted empty so `validate-event` fails until a
-    reviewer fills them in; no segment text is ever placed in the result.
+    The human-owned fields — including `cited_span`, which this function never
+    fills in — are emitted empty so `validate-event` fails until a reviewer
+    finds the span themselves and pastes it in; no segment text is ever placed
+    in the result. This is the manual fallback (ADR-0008): there is no pipeline
+    run behind it, so `run_id` is fixed to the literal value `manual` rather
+    than asking the human to invent one.
     """
     _validate_identifier(event_id, "event_id")
+    _validate_identifier(drafted_by, "drafted_by")
     return {
         "event_id": event_id,
         "source": segment.source,
@@ -115,7 +138,10 @@ def draft_candidate_event(
         "kind": "",
         "summary": "",
         "uncertainty": "",
+        "cited_span": "",
         "review_status": "proposed",
+        "drafted_by": drafted_by,
+        "run_id": "manual",
         "claims": [],
         "mechanisms": [],
         "counterarguments": [],

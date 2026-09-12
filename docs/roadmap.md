@@ -21,7 +21,7 @@ Every milestone below is accepted on something a reader can look at. Tests still
 have to pass; they are not the deliverable.
 
 **Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
-`uv run --no-sync pytest` (56 passed), and
+`uv run --no-sync pytest` (95 passed), and
 `uv run --no-sync signalweave public-check` passed on 2026-09-12.
 
 ## Completed
@@ -47,38 +47,60 @@ basket → export → layer 1 tracks the basket → one page.
 
 Everything machine-made, everything stamped `review_status: unreviewed`.
 
-**Prerequisite, to verify before writing the spec:** can MarketPulse's layer 1
-compute relative strength for an arbitrary list of instruments that are not in
-`themes/v1.yaml`? The main rank is built on theme membership plus PIT rules. If
-the RS path is bound to theme membership, "put in anything plausibly implicated"
-has nowhere to land, and this milestone gains a prerequisite item: let layer 1
-compute RS for an arbitrary ticker list, outside the main rank pool, keeping the
-existing "baskets shown side by side, never ranked" constraint.
+**Prerequisite, resolved 2026-09-12 in `docs/specs/milestone-2-v0.md`:** checked
+directly against the MarketPulse repo rather than assumed. Basket-level RS
+(`baskets.py`'s `compute_basket_metrics`/`_basket_rs`) already runs on an
+arbitrary ticker list against the full `bars` pivot, which already covers every
+listed common stock, not just `themes/v1.yaml`'s 65 tickers — not a blocker, as
+long as this milestone doesn't lean on `either_way`'s theme-id resolution (it
+doesn't; see "Basket shape" below).
 
 Scope:
 
 1. **Run record** — one file per run: model id, method version, verbatim output.
    No content addressing. This is the only part that cannot be added later: a run
-   that was not recorded is gone.
+   that was not recorded is gone. **Built** (`signalweave.runs`), synthetic tests
+   only.
 2. **Method files** — versioned prompts tracked in the repo, carrying no source
-   text, so a method change is a reviewable patch.
+   text, so a method change is a reviewable patch. **Built** (`methods/`:
+   `propose_v1.md`, `story_v1.md`, `basket_v1.md`).
 3. **Pipeline** — segment → propose per segment → span check → story draft →
    basket. Deterministic orchestration with model steps inside it, not an agent
    loop; every step's input and output are storable, which is what makes a run
-   re-runnable.
+   re-runnable. **Built** (`signalweave.pipeline`, `signalweave.propose`); the
+   proposer calls Anthropic (`ANTHROPIC_API_KEY`, never committed) — a real cost
+   and a real ADR-0009 privacy consequence flagged for the PO, not defaulted to
+   silently. A segment whose proposal fails the span-exists check is skipped,
+   not fatal to the run.
 4. **Pass-through gate** — every record carries `review_status: unreviewed`,
-   `drafted_by`, and its run id.
+   `drafted_by`, and its run id, unconditionally. **Built** — enforced in
+   `schema`, `threads`, and `basket`.
 5. **Export** — story and basket, no price, no ranking. `export-baskets` as
-   specified in `docs/specs/thread-exposure-v0.md`.
+   specified in `docs/specs/thread-exposure-v0.md`'s DO-2 command surface, with
+   the one-basket-per-story shape from this spec's "Basket shape" section, not
+   that file's superseded three-way split. **Built** (`signalweave.export`).
 6. **The page** — rendered by MarketPulse, which owns price: story context, the
-   basket, and the basket's relative strength, on one page.
+   basket, and the basket's relative strength, on one page. **Not built here** —
+   a separate, later prompt once this export format is stable; MarketPulse's
+   rendering is not this implementation's responsibility.
 
-Also folded in: the three friction fixes from
-`docs/specs/transcript-navigation-v0.md` (DO-3), if still relevant.
+Also folded in, **built**: the three friction fixes from
+`docs/specs/transcript-navigation-v0.md` (DO-3) — `--review-id` resolution
+(path form still works), early `--thread` validation naming the unknown id
+before any review-content check runs, `--help` documenting every repeatable
+flag.
 
-**Acceptance:** the page exists, built unattended from one real transcript, and a
-reader can say what story is being told and whether the basket is strengthening.
-"Interesting" and "garbage" are both results.
+**Verification status, 2026-09-12:** items 1–5 and the friction fixes pass
+`uv run --no-sync pytest` (95 passed, synthetic transcripts and a fake model
+client only — no real API call made) and `uv run --no-sync signalweave
+public-check`. **Not yet done:** an actual unattended run on one real
+transcript, and item 6. Running the pipeline for real means spending money on
+the Anthropic API and sending real source text to it (ADR-0009) — that run is
+the PO's call to trigger, not something exercised automatically here.
+
+**Acceptance (unchanged, not yet met):** the page exists, built unattended from
+one real transcript, and a reader can say what story is being told and whether
+the basket is strengthening. "Interesting" and "garbage" are both results.
 
 ## Milestone 3: the basket changes
 

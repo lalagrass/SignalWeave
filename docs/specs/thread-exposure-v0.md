@@ -44,6 +44,14 @@ MarketPulse's side, done after this export exists and is proven readable. See
 
 ## DO-1 — exposure record
 
+> **Superseded for M2 by `docs/specs/milestone-2-v0.md`'s "Basket shape"
+> section.** That spec picks one basket per story — a flat instrument list,
+> machine-drafted, no split — over the three-way `if_true`/`if_false`/
+> `either_way` design below, and gives its own reasoning (it matches the docs
+> actually rewritten for this redesign, and "possibly related, wide" is not a
+> claim split into two sides of a bet). The design below is not built; it is
+> kept only as the record of what M1-era thinking proposed before the pivot.
+
 Add an exposure block to a thread, written by a human, append-only like the rest:
 
 - `if_true` — instruments that benefit if the mechanism holds.
@@ -62,12 +70,21 @@ without commentary.
 uv run --no-sync signalweave export-baskets --as-of 2026-09-20 --out path/to/baskets.yaml
 ```
 
+> For M2, "the three baskets" below is one basket: a flat instrument list, per
+> `docs/specs/milestone-2-v0.md`. The command surface (`--as-of`, `--out`,
+> thread/story id, review date, overdue flag) is what survives from this DO-2;
+> the payload shape does not.
+
 Emit one entry per thread: thread id, review date, overdue flag computed from
 `--as-of`, and the three baskets. Nothing source-derived, no summaries, no
 mechanism text — the export is a list of instruments, so it can cross into
 another tool without carrying private research with it.
 
 ## Acceptance
+
+> Superseded for M2 by `docs/specs/milestone-2-v0.md`'s own Acceptance section.
+> The "three baskets" and "if_false" wording in items 2–3 below refers to the
+> superseded DO-1 shape and no longer describes what M2 tests.
 
 Acceptance for this spec is synthetic only. It is done when:
 

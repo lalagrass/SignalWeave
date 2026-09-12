@@ -17,7 +17,10 @@ class EventValidationError(ValueError):
 
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]*$")
 EVENT_KINDS = frozenset({"evidence", "observation", "catalyst", "counterargument"})
-REVIEW_STATUSES = frozenset({"proposed", "keep_unlinked", "discarded"})
+# "unreviewed" is the pass-through gate's stamp (ADR-0008): every event the
+# pipeline drafts carries it. "proposed" survives only for the manual
+# draft-event fallback's not-yet-filled-in skeleton.
+REVIEW_STATUSES = frozenset({"proposed", "unreviewed", "keep_unlinked", "discarded"})
 UNCERTAINTY_LEVELS = frozenset({"low", "medium", "high"})
 REQUIRED_FIELDS = frozenset(
     {
@@ -29,6 +32,9 @@ REQUIRED_FIELDS = frozenset(
         "summary",
         "review_status",
         "uncertainty",
+        "cited_span",
+        "drafted_by",
+        "run_id",
     }
 )
 OPTIONAL_FIELDS = frozenset(
@@ -39,7 +45,7 @@ ALLOWED_FIELDS = REQUIRED_FIELDS | OPTIONAL_FIELDS
 
 @dataclass(frozen=True)
 class CandidateEvent:
-    """A proposed neutral observation awaiting human review."""
+    """A machine-authored neutral observation, pass-through reviewed (ADR-0008)."""
 
     event_id: str
     source: str
@@ -49,6 +55,9 @@ class CandidateEvent:
     summary: str
     review_status: str
     uncertainty: str
+    cited_span: str
+    drafted_by: str
+    run_id: str
     claims: tuple[str, ...] = ()
     mechanisms: tuple[str, ...] = ()
     counterarguments: tuple[str, ...] = ()
@@ -69,6 +78,9 @@ class CandidateEvent:
         summary = _non_empty_string(record["summary"], "summary")
         if len(summary) > 600:
             raise EventValidationError("summary must be at most 600 characters")
+        cited_span = _non_empty_string(record["cited_span"], "cited_span")
+        if len(cited_span) > 600:
+            raise EventValidationError("cited_span must be at most 600 characters")
 
         kind = _choice(record["kind"], "kind", EVENT_KINDS)
         review_status = _choice(record["review_status"], "review_status", REVIEW_STATUSES)
@@ -83,6 +95,9 @@ class CandidateEvent:
             summary=summary,
             review_status=review_status,
             uncertainty=uncertainty,
+            cited_span=cited_span,
+            drafted_by=_identifier(record["drafted_by"], "drafted_by"),
+            run_id=_identifier(record["run_id"], "run_id"),
             claims=_string_list(record.get("claims", []), "claims"),
             mechanisms=_string_list(record.get("mechanisms", []), "mechanisms"),
             counterarguments=_string_list(
@@ -92,6 +107,25 @@ class CandidateEvent:
                 record.get("candidate_threads", []), "candidate_threads"
             ),
         )
+
+    def to_mapping(self) -> dict[str, Any]:
+        return {
+            "event_id": self.event_id,
+            "source": self.source,
+            "source_locator": self.source_locator,
+            "date": self.date.isoformat(),
+            "kind": self.kind,
+            "summary": self.summary,
+            "review_status": self.review_status,
+            "uncertainty": self.uncertainty,
+            "cited_span": self.cited_span,
+            "drafted_by": self.drafted_by,
+            "run_id": self.run_id,
+            "claims": list(self.claims),
+            "mechanisms": list(self.mechanisms),
+            "counterarguments": list(self.counterarguments),
+            "candidate_threads": list(self.candidate_threads),
+        }
 
 
 def load_candidate_event(path: Path) -> CandidateEvent:

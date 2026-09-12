@@ -39,9 +39,12 @@ def thread() -> object:
         mechanism="Synthetic capacity constraints can increase supplier leverage.",
         open_question="Will capacity remain constrained through the next review date?",
         invalidation_conditions=["Synthetic demand normalizes before pricing changes."],
+        groups=["synthetic upstream suppliers"],
+        market_sentiment="Synthetic cautiously positive sentiment.",
         review_date="2026-12-15",
         created_by="researcher_a",
         drafted_by="researcher_a",
+        run_id="run_synthetic001",
         created_at=datetime(2026, 9, 11, tzinfo=timezone.utc),
     )
 
@@ -53,10 +56,46 @@ def test_thread_requires_human_mechanism_question_invalidation_and_review_date()
             mechanism="A synthetic mechanism.",
             open_question="A synthetic question?",
             invalidation_conditions=[],
+            groups=["synthetic group"],
+            market_sentiment="Synthetic sentiment.",
             review_date="2026-12-15",
             created_by="researcher_a",
             drafted_by="researcher_a",
+            run_id="run_synthetic001",
         )
+
+
+def test_thread_requires_non_empty_groups() -> None:
+    with pytest.raises(ThreadValidationError, match="groups must not be empty"):
+        create_thread(
+            thread_id="thread_supply_constraint",
+            mechanism="A synthetic mechanism.",
+            open_question="A synthetic question?",
+            invalidation_conditions=["A synthetic invalidation condition."],
+            groups=[],
+            market_sentiment="Synthetic sentiment.",
+            review_date="2026-12-15",
+            created_by="researcher_a",
+            drafted_by="researcher_a",
+            run_id="run_synthetic001",
+        )
+
+
+def test_thread_review_status_is_always_unreviewed() -> None:
+    record = create_thread(
+        thread_id="thread_supply_constraint",
+        mechanism="A synthetic mechanism.",
+        open_question="A synthetic question?",
+        invalidation_conditions=["A synthetic invalidation condition."],
+        groups=["synthetic group"],
+        market_sentiment="Synthetic sentiment.",
+        review_date="2026-12-15",
+        created_by="researcher_a",
+        drafted_by="researcher_a",
+        run_id="run_synthetic001",
+    )
+
+    assert record.review_status == "unreviewed"
 
 
 def test_thread_tracks_drafted_by_separately_from_created_by() -> None:
@@ -65,9 +104,12 @@ def test_thread_tracks_drafted_by_separately_from_created_by() -> None:
         mechanism="A synthetic mechanism.",
         open_question="A synthetic question?",
         invalidation_conditions=["A synthetic invalidation condition."],
+        groups=["synthetic group"],
+        market_sentiment="Synthetic sentiment.",
         review_date="2026-12-15",
         created_by="researcher_a",
         drafted_by="agent_signalweave",
+        run_id="run_synthetic001",
         created_at=datetime(2026, 9, 11, tzinfo=timezone.utc),
     )
 

@@ -107,6 +107,43 @@ The record is written under ignored `data/inbox/reviews/`. Valid actions are
 `keep_unlinked`, `discard`, and `link_to_thread`; only the last action accepts
 `--thread`.
 
+## Run the pipeline on a transcript
+
+`run-pipeline` segments a transcript and runs it end to end: propose per
+segment, span-exists check, story draft, basket draft. Every record it writes
+is machine-authored and stamped `review_status: unreviewed` with `drafted_by`
+and its run id (ADR-0008); nothing here waits for a human.
+
+```bash
+export ANTHROPIC_API_KEY=sk-...
+uv run --no-sync signalweave run-pipeline path/to/private.md \
+  --source source_a \
+  --document-id doc_2026_001 \
+  --date 2026-09-11 \
+  --model-id claude-sonnet-4-5-20250929 \
+  --privacy-tier remote
+```
+
+This calls the Anthropic API once per segment plus once for the story and once
+for the basket, and writes one immutable run record per call under ignored
+`data/private/runs/` (ADR-0009). `--privacy-tier local` refuses to run at all —
+loudly, before any call — rather than silently sending a local-only source to
+a remote provider. Running this against real material spends money and sends
+that material to a third party: decide that deliberately, per source, rather
+than by habit.
+
+## Export baskets for MarketPulse
+
+```bash
+uv run --no-sync signalweave export-baskets --as-of 2026-09-20 --out /tmp/baskets.yaml
+```
+
+Emits one entry per story — id, review date, an overdue flag computed from
+`--as-of`, and its flat instrument basket. Nothing source-derived: no summary,
+no mechanism text. This is the seam with MarketPulse
+(`docs/specs/thread-exposure-v0.md`); SignalWeave never fetches a price or
+ranks a basket.
+
 ## Local setup
 
 ```bash

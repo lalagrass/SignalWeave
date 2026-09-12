@@ -19,8 +19,11 @@ def candidate_event() -> CandidateEvent:
             "date": "2026-09-11",
             "kind": "evidence",
             "summary": "A synthetic observation.",
-            "review_status": "proposed",
+            "review_status": "unreviewed",
             "uncertainty": "medium",
+            "cited_span": "A synthetic quoted span.",
+            "drafted_by": "model_synthetic",
+            "run_id": "run_synthetic001",
         }
     )
 

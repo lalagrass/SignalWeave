@@ -1,10 +1,44 @@
 from __future__ import annotations
 
+import shutil
+from datetime import date, timedelta
 from pathlib import Path
 
+import pytest
 import yaml
 
+import signalweave.cli as cli_module
 from signalweave.cli import main
+from signalweave.pipeline import REVIEW_CADENCE_DAYS
+
+METHODS_SOURCE = Path(__file__).resolve().parent.parent / "methods"
+
+
+class FakeAnthropicModelClient:
+    """Stands in for `signalweave.propose.AnthropicModelClient`: never touches
+    the network, returns one canned response per call in order.
+    """
+
+    _RESPONSES = [
+        '[{"kind": "observation", "summary": "A synthetic observation.", '
+        '"uncertainty": "medium", "cited_span": "Private source wording should '
+        'never reach a tracked file."}]',
+        '[{"kind": "observation", "summary": "A second synthetic observation.", '
+        '"uncertainty": "medium", "cited_span": "A second synthetic paragraph '
+        'makes the segment count deterministic."}]',
+        '{"mechanism": "A synthetic mechanism.", "open_question": "A synthetic question?", '
+        '"invalidation_conditions": ["A synthetic invalidation condition."], '
+        '"groups": ["synthetic upstream suppliers"], '
+        '"market_sentiment": "Synthetic cautiously positive sentiment."}',
+        '{"instruments": ["tsmc", "asml"]}',
+    ]
+
+    def __init__(self, *, model_id: str) -> None:
+        self.model_id = model_id
+        self._responses = list(self._RESPONSES)
+
+    def complete(self, prompt: str) -> str:
+        return self._responses.pop(0)
 
 
 def test_public_check_fails_loudly_when_unconfigured(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -42,8 +76,11 @@ source_locator: doc_2026_001#segment_12
 date: 2026-09-11
 kind: evidence
 summary: A synthetic observation.
-review_status: proposed
+review_status: unreviewed
 uncertainty: medium
+cited_span: A synthetic quoted span.
+drafted_by: model_synthetic
+run_id: run_synthetic001
 """,
         encoding="utf-8",
     )
@@ -100,8 +137,11 @@ source_locator: doc_2026_001#segment_12
 date: 2026-09-11
 kind: evidence
 summary: A synthetic observation.
-review_status: proposed
+review_status: unreviewed
 uncertainty: medium
+cited_span: A synthetic quoted span.
+drafted_by: model_synthetic
+run_id: run_synthetic001
 """,
         encoding="utf-8",
     )
@@ -146,12 +186,18 @@ def test_create_thread_writes_only_a_private_thread(tmp_path: Path, monkeypatch,
                 "A synthetic question?",
                 "--invalidation-condition",
                 "A synthetic invalidation condition.",
+                "--group",
+                "synthetic upstream suppliers",
+                "--market-sentiment",
+                "Synthetic cautiously positive sentiment.",
                 "--review-date",
                 "2026-12-15",
                 "--created-by",
                 "researcher_a",
                 "--drafted-by",
                 "researcher_a",
+                "--run-id",
+                "run_synthetic001",
                 "--created-at",
                 "2026-09-11T00:00:00+00:00",
             ]
@@ -190,6 +236,8 @@ def test_draft_event_writes_an_invalid_skeleton_until_a_human_fills_it_in(
                 "1",
                 "--event-id",
                 "evt_2026_001",
+                "--drafted-by",
+                "researcher_a",
             ]
         )
         == 0
@@ -206,7 +254,10 @@ def test_draft_event_writes_an_invalid_skeleton_until_a_human_fills_it_in(
     assert draft["kind"] == ""
     assert draft["summary"] == ""
     assert draft["uncertainty"] == ""
+    assert draft["cited_span"] == ""
     assert draft["review_status"] == "proposed"
+    assert draft["drafted_by"] == "researcher_a"
+    assert draft["run_id"] == "manual"
 
     assert main(["validate-event", str(draft_path)]) == 1
     assert "Event validation failed" in capsys.readouterr().out
@@ -214,6 +265,7 @@ def test_draft_event_writes_an_invalid_skeleton_until_a_human_fills_it_in(
     draft["kind"] = "evidence"
     draft["summary"] = "A synthetic observation."
     draft["uncertainty"] = "medium"
+    draft["cited_span"] = "A synthetic quoted span the reviewer found themselves."
     draft_path.write_text(yaml.safe_dump(draft, sort_keys=False), encoding="utf-8")
 
     assert main(["validate-event", str(draft_path)]) == 0
@@ -246,6 +298,8 @@ def test_draft_event_rejects_out_of_range_segment_without_leaking_text(
                 "12",
                 "--event-id",
                 "evt_2026_001",
+                "--drafted-by",
+                "researcher_a",
             ]
         )
         == 1
@@ -279,6 +333,8 @@ def test_draft_event_refuses_to_overwrite_an_existing_draft(
         "1",
         "--event-id",
         "evt_2026_001",
+        "--drafted-by",
+        "researcher_a",
     ]
 
     assert main(args) == 0
@@ -299,8 +355,11 @@ source_locator: doc_2026_001#segment_12
 date: 2026-09-11
 kind: evidence
 summary: A synthetic observation.
-review_status: proposed
+review_status: unreviewed
 uncertainty: medium
+cited_span: A synthetic quoted span.
+drafted_by: model_synthetic
+run_id: run_synthetic001
 """,
         encoding="utf-8",
     )
@@ -316,12 +375,18 @@ uncertainty: medium
                 "A synthetic question?",
                 "--invalidation-condition",
                 "A synthetic invalidation condition.",
+                "--group",
+                "synthetic upstream suppliers",
+                "--market-sentiment",
+                "Synthetic cautiously positive sentiment.",
                 "--review-date",
                 "2026-12-15",
                 "--created-by",
                 "researcher_a",
                 "--drafted-by",
                 "agent_signalweave",
+                "--run-id",
+                "run_synthetic001",
                 "--created-at",
                 "2026-09-11T00:00:00+00:00",
             ]
@@ -413,12 +478,18 @@ def test_list_threads_marks_overdue_only_from_the_supplied_as_of_date(
                 "A synthetic question?",
                 "--invalidation-condition",
                 "A synthetic invalidation condition.",
+                "--group",
+                "synthetic upstream suppliers",
+                "--market-sentiment",
+                "Synthetic cautiously positive sentiment.",
                 "--review-date",
                 "2026-12-15",
                 "--created-by",
                 "researcher_a",
                 "--drafted-by",
                 "researcher_a",
+                "--run-id",
+                "run_synthetic001",
                 "--created-at",
                 "2026-09-11T00:00:00+00:00",
             ]
@@ -435,3 +506,313 @@ def test_list_threads_marks_overdue_only_from_the_supplied_as_of_date(
     assert main(["list-threads", "--as-of", "2027-01-01"]) == 0
     overdue_output = capsys.readouterr().out
     assert "OVERDUE" in overdue_output
+
+
+def test_run_pipeline_writes_events_story_and_basket_end_to_end(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(cli_module, "AnthropicModelClient", FakeAnthropicModelClient)
+    shutil.copytree(METHODS_SOURCE, tmp_path / "methods")
+    transcript = tmp_path / "private.md"
+    transcript.write_text(
+        "Private source wording should never reach a tracked file.\n\n"
+        "A second synthetic paragraph makes the segment count deterministic.",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert (
+        main(
+            [
+                "run-pipeline",
+                str(transcript),
+                "--source",
+                "source_a",
+                "--document-id",
+                "doc_2026_001",
+                "--date",
+                "2026-09-11",
+                "--model-id",
+                "claude-synthetic-1",
+                "--privacy-tier",
+                "remote",
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert "story_doc_2026_001" in output
+    assert "Private source wording" not in output
+
+    events_directory = tmp_path / "data" / "inbox" / "events"
+    assert len(list(events_directory.glob("*.yaml"))) == 2
+    thread_path = tmp_path / "data" / "private" / "threads" / "story_doc_2026_001" / "thread.yaml"
+    basket_path = tmp_path / "data" / "private" / "threads" / "story_doc_2026_001" / "basket.yaml"
+    assert thread_path.exists()
+    assert basket_path.exists()
+    assert "Private source wording" not in thread_path.read_text(encoding="utf-8")
+    assert "Private source wording" not in basket_path.read_text(encoding="utf-8")
+    runs_directory = tmp_path / "data" / "private" / "runs"
+    assert len(list(runs_directory.glob("*.yaml"))) == 4
+
+
+def test_run_pipeline_refuses_a_local_only_source(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(cli_module, "AnthropicModelClient", FakeAnthropicModelClient)
+    shutil.copytree(METHODS_SOURCE, tmp_path / "methods")
+    transcript = tmp_path / "private.md"
+    transcript.write_text(
+        "Private wording that must never leave this file.\n\n"
+        "A second synthetic paragraph makes the segment count deterministic.",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert (
+        main(
+            [
+                "run-pipeline",
+                str(transcript),
+                "--source",
+                "source_a",
+                "--document-id",
+                "doc_2026_001",
+                "--date",
+                "2026-09-11",
+                "--model-id",
+                "claude-synthetic-1",
+                "--privacy-tier",
+                "local",
+            ]
+        )
+        == 1
+    )
+    assert "local-only" in capsys.readouterr().out
+
+
+def test_export_baskets_writes_one_flat_basket_per_story(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(cli_module, "AnthropicModelClient", FakeAnthropicModelClient)
+    shutil.copytree(METHODS_SOURCE, tmp_path / "methods")
+    transcript = tmp_path / "private.md"
+    transcript.write_text(
+        "Private source wording should never reach a tracked file.\n\n"
+        "A second synthetic paragraph makes the segment count deterministic.",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    assert (
+        main(
+            [
+                "run-pipeline",
+                str(transcript),
+                "--source",
+                "source_a",
+                "--document-id",
+                "doc_2026_001",
+                "--date",
+                "2026-09-11",
+                "--model-id",
+                "claude-synthetic-1",
+                "--privacy-tier",
+                "remote",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    out_path = tmp_path / "export" / "baskets.yaml"
+
+    assert main(["export-baskets", "--as-of", "2026-09-20", "--out", str(out_path)]) == 0
+    assert "Exported 1 story" in capsys.readouterr().out
+
+    expected_review_date = date.today() + timedelta(days=REVIEW_CADENCE_DAYS)
+    exported = yaml.safe_load(out_path.read_text(encoding="utf-8"))
+    assert exported["stories"] == [
+        {
+            "thread_id": "story_doc_2026_001",
+            "review_date": expected_review_date.isoformat(),
+            "overdue": expected_review_date < date(2026, 9, 20),
+            "basket": ["tsmc", "asml"],
+        }
+    ]
+
+
+def test_append_thread_update_resolves_review_id_against_the_inbox(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    candidate = tmp_path / "candidate.yaml"
+    candidate.write_text(
+        """event_id: evt_2026_001
+source: source_a
+source_locator: doc_2026_001#segment_12
+date: 2026-09-11
+kind: evidence
+summary: A synthetic observation.
+review_status: unreviewed
+uncertainty: medium
+cited_span: A synthetic quoted span.
+drafted_by: model_synthetic
+run_id: run_synthetic001
+""",
+        encoding="utf-8",
+    )
+    assert (
+        main(
+            [
+                "create-thread",
+                "--thread-id",
+                "thread_supply_constraint",
+                "--mechanism",
+                "A synthetic mechanism.",
+                "--open-question",
+                "A synthetic question?",
+                "--invalidation-condition",
+                "A synthetic invalidation condition.",
+                "--group",
+                "synthetic upstream suppliers",
+                "--market-sentiment",
+                "Synthetic sentiment.",
+                "--review-date",
+                "2026-12-15",
+                "--created-by",
+                "researcher_a",
+                "--drafted-by",
+                "researcher_a",
+                "--run-id",
+                "run_synthetic001",
+            ]
+        )
+        == 0
+    )
+    assert (
+        main(
+            [
+                "review-event",
+                str(candidate),
+                "--action",
+                "link_to_thread",
+                "--thread",
+                "thread_supply_constraint",
+                "--reviewer",
+                "researcher_a",
+                "--review-id",
+                "review_2026_001",
+                "--reviewed-at",
+                "2026-09-11T00:00:00+00:00",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        main(
+            [
+                "append-thread-update",
+                "--review-id",
+                "review_2026_001",
+                "--thread",
+                "thread_supply_constraint",
+                "--event-id",
+                "evt_2026_001",
+                "--update-id",
+                "update_2026_001",
+                "--evidence-role",
+                "supporting",
+                "--summary",
+                "A synthetic reviewed observation supports the mechanism.",
+                "--date",
+                "2026-09-11",
+                "--added-by",
+                "researcher_a",
+                "--drafted-by",
+                "researcher_a",
+                "--added-at",
+                "2026-09-11T00:00:00+00:00",
+            ]
+        )
+        == 0
+    )
+    assert "Thread update recorded" in capsys.readouterr().out
+
+
+def test_append_thread_update_requires_exactly_one_of_path_or_review_id(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert (
+        main(
+            [
+                "append-thread-update",
+                "--thread",
+                "thread_supply_constraint",
+                "--event-id",
+                "evt_2026_001",
+                "--update-id",
+                "update_2026_001",
+                "--evidence-role",
+                "supporting",
+                "--summary",
+                "A synthetic summary.",
+                "--date",
+                "2026-09-11",
+                "--added-by",
+                "researcher_a",
+                "--drafted-by",
+                "researcher_a",
+            ]
+        )
+        == 1
+    )
+    assert "exactly one" in capsys.readouterr().out
+
+
+def test_append_thread_update_names_an_unknown_thread_before_checking_the_review(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    # No review file exists at this path either — if the thread check did not
+    # run first, this would fail with a review-loading error instead, naming
+    # the wrong problem.
+    missing_review = tmp_path / "does_not_exist.yaml"
+
+    assert (
+        main(
+            [
+                "append-thread-update",
+                str(missing_review),
+                "--thread",
+                "thread_typo",
+                "--event-id",
+                "evt_2026_001",
+                "--update-id",
+                "update_2026_001",
+                "--evidence-role",
+                "supporting",
+                "--summary",
+                "A synthetic summary.",
+                "--date",
+                "2026-09-11",
+                "--added-by",
+                "researcher_a",
+                "--drafted-by",
+                "researcher_a",
+            ]
+        )
+        == 1
+    )
+    assert "unknown thread: thread_typo" in capsys.readouterr().out
+
+
+def test_help_documents_every_repeatable_flag(capsys) -> None:
+    for command in ("create-thread",):
+        with pytest.raises(SystemExit) as excinfo:
+            main([command, "--help"])
+        assert excinfo.value.code == 0
+        output = capsys.readouterr().out
+        assert "--invalidation-condition" in output
+        assert "--group" in output
+        assert output.count("repeated") == 2

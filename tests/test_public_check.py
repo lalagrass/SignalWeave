@@ -69,8 +69,16 @@ def test_violations_allows_bare_zone_and_known_subfolder_references(tmp_path: Pa
     doc.write_text(
         "Raw sources live under data/raw/. Candidate cards go to "
         "data/inbox/events/, reviews to data/inbox/reviews/, threads to "
-        "data/private/threads/, and worklogs to data/private/worklog/."
+        "data/private/threads/, worklogs to data/private/worklog/, and run "
+        "records to data/private/runs/."
     )
+
+    assert violations(tmp_path, paths=[doc]) == []
+
+
+def test_violations_allows_the_bare_runs_zone_reference(tmp_path: Path) -> None:
+    doc = tmp_path / "architecture.md"
+    doc.write_text("Run records live in data/private/runs/, one file per run.")
 
     assert violations(tmp_path, paths=[doc]) == []
 

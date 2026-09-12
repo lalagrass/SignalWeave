@@ -31,6 +31,9 @@ class SyntheticProposer:
                 "summary": "A synthetic observation may warrant review.",
                 "review_status": "accepted",
                 "uncertainty": "medium",
+                "cited_span": segment.text,
+                "drafted_by": "model_synthetic",
+                "run_id": "run_synthetic001",
             },
         )
 
@@ -53,7 +56,7 @@ def test_segment_transcript_can_return_no_segments() -> None:
     assert segment_transcript("Too short.", source="source_a", document_id="doc_2026_001") == ()
 
 
-def test_extraction_enforces_segment_locator_and_proposed_review_status() -> None:
+def test_extraction_enforces_segment_locator_and_unreviewed_status() -> None:
     segment = TranscriptSegment(
         source="source_a",
         source_locator="doc_2026_001#segment_1",
@@ -65,7 +68,34 @@ def test_extraction_enforces_segment_locator_and_proposed_review_status() -> Non
 
     assert candidate.source == "source_a"
     assert candidate.source_locator == "doc_2026_001#segment_1"
-    assert candidate.review_status == "proposed"
+    assert candidate.review_status == "unreviewed"
+
+
+def test_extraction_rejects_a_cited_span_not_in_the_segment() -> None:
+    class FabricatingProposer:
+        def propose(self, segment: TranscriptSegment) -> Iterable[Mapping[str, Any]]:
+            return (
+                {
+                    "event_id": "evt_2026_001",
+                    "date": "2026-09-11",
+                    "kind": "observation",
+                    "summary": "A synthetic observation.",
+                    "uncertainty": "medium",
+                    "cited_span": "This exact wording never appears in the segment.",
+                    "drafted_by": "model_synthetic",
+                    "run_id": "run_synthetic001",
+                },
+            )
+
+    segment = TranscriptSegment(
+        source="source_a",
+        source_locator="doc_2026_001#segment_1",
+        position=1,
+        text="Synthetic private text that is never written by the extractor.",
+    )
+
+    with pytest.raises(EventValidationError, match="cited_span does not verifiably exist"):
+        extract_candidates((segment,), FabricatingProposer())
 
 
 def test_extraction_rejects_invalid_proposer_output() -> None:
@@ -111,7 +141,9 @@ def test_draft_candidate_event_carries_only_machine_known_fields() -> None:
         text="Synthetic private text that must never reach the draft.",
     )
 
-    record = draft_candidate_event(segment, event_id="evt_2026_001", event_date="2026-09-11")
+    record = draft_candidate_event(
+        segment, event_id="evt_2026_001", event_date="2026-09-11", drafted_by="researcher_a"
+    )
 
     assert record == {
         "event_id": "evt_2026_001",
@@ -121,7 +153,10 @@ def test_draft_candidate_event_carries_only_machine_known_fields() -> None:
         "kind": "",
         "summary": "",
         "uncertainty": "",
+        "cited_span": "",
         "review_status": "proposed",
+        "drafted_by": "researcher_a",
+        "run_id": "manual",
         "claims": [],
         "mechanisms": [],
         "counterarguments": [],

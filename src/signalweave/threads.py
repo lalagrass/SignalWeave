@@ -14,16 +14,22 @@ from signalweave.schema import IDENTIFIER
 
 
 EVIDENCE_ROLES = frozenset({"supporting", "counter"})
+# Pass-through gate (ADR-0008): a story is never anything but unreviewed.
+THREAD_REVIEW_STATUSES = frozenset({"unreviewed"})
 THREAD_REQUIRED_FIELDS = frozenset(
     {
         "thread_id",
         "mechanism",
         "open_question",
         "invalidation_conditions",
+        "groups",
+        "market_sentiment",
         "review_date",
         "created_at",
         "created_by",
         "drafted_by",
+        "review_status",
+        "run_id",
     }
 )
 UPDATE_REQUIRED_FIELDS = frozenset(
@@ -48,23 +54,31 @@ class ThreadValidationError(ValueError):
 
 @dataclass(frozen=True)
 class ResearchThread:
-    """A human-owned causal hypothesis awaiting future review.
+    """A story: a hypothesis about a mechanism (PRODUCT.md; "thread" in code,
+    "story" in the milestone 2 docs — the same record under two names).
 
-    `created_by` is the human who accepts and owns the record. `drafted_by`
-    is whoever produced its free text (mechanism, open question,
-    invalidation conditions) — a human id, or an agent identifier when a
-    human has not yet composed that text themselves. The two are tracked
-    separately so a thread can never look human-authored by default.
+    `created_by` is the human or model that accepts and owns the record.
+    `drafted_by` is whoever produced its free text (mechanism, open question,
+    groups, market sentiment, invalidation conditions) — a human id, or a
+    model/agent identifier when a human has not composed that text
+    themselves. The two are tracked separately so a thread can never look
+    human-authored by default. Under the pass-through gate (ADR-0008),
+    `review_status` is always `unreviewed` and `run_id` names the pipeline run
+    that drafted it.
     """
 
     thread_id: str
     mechanism: str
     open_question: str
     invalidation_conditions: tuple[str, ...]
+    groups: tuple[str, ...]
+    market_sentiment: str
     review_date: date
     created_at: datetime
     created_by: str
     drafted_by: str
+    review_status: str
+    run_id: str
 
     @classmethod
     def from_mapping(cls, record: dict[str, Any]) -> "ResearchThread":
@@ -72,15 +86,25 @@ class ResearchThread:
         conditions = _string_list(record["invalidation_conditions"], "invalidation_conditions")
         if not conditions:
             raise ThreadValidationError("invalidation_conditions must not be empty")
+        groups = _string_list(record["groups"], "groups")
+        if not groups:
+            raise ThreadValidationError("groups must not be empty")
+        review_status = _non_empty_string(record["review_status"], "review_status")
+        if review_status not in THREAD_REVIEW_STATUSES:
+            raise ThreadValidationError("review_status must be 'unreviewed'")
         return cls(
             thread_id=_identifier(record["thread_id"], "thread_id"),
             mechanism=_summary(record["mechanism"], "mechanism"),
             open_question=_summary(record["open_question"], "open_question"),
             invalidation_conditions=conditions,
+            groups=groups,
+            market_sentiment=_summary(record["market_sentiment"], "market_sentiment"),
             review_date=_date(record["review_date"], "review_date"),
             created_at=_datetime(record["created_at"], "created_at"),
             created_by=_identifier(record["created_by"], "created_by"),
             drafted_by=_identifier(record["drafted_by"], "drafted_by"),
+            review_status=review_status,
+            run_id=_identifier(record["run_id"], "run_id"),
         )
 
     def to_mapping(self) -> dict[str, Any]:
@@ -89,10 +113,14 @@ class ResearchThread:
             "mechanism": self.mechanism,
             "open_question": self.open_question,
             "invalidation_conditions": list(self.invalidation_conditions),
+            "groups": list(self.groups),
+            "market_sentiment": self.market_sentiment,
             "review_date": self.review_date.isoformat(),
             "created_at": self.created_at.isoformat(),
             "created_by": self.created_by,
             "drafted_by": self.drafted_by,
+            "review_status": self.review_status,
+            "run_id": self.run_id,
         }
 
 
@@ -158,16 +186,22 @@ def create_thread(
     mechanism: str,
     open_question: str,
     invalidation_conditions: list[str],
+    groups: list[str],
+    market_sentiment: str,
     review_date: str,
     created_by: str,
     drafted_by: str,
+    run_id: str,
     created_at: datetime | None = None,
 ) -> ResearchThread:
-    """Create a human-owned hypothesis record.
+    """Create a story record. `review_status` is always `unreviewed`
+    (ADR-0008) — it is not a parameter, because nothing legitimately sets it
+    to anything else today.
 
     `created_by` and `drafted_by` may be the same id when a human wrote and
-    accepts the record themselves; they must be supplied separately so an
-    agent-drafted record cannot default to looking human-authored.
+    accepts the record themselves, or when a pipeline run owns and drafted it
+    end to end; they must be supplied separately so an agent-drafted record
+    cannot default to looking human-authored.
     """
     return ResearchThread.from_mapping(
         {
@@ -175,10 +209,14 @@ def create_thread(
             "mechanism": mechanism,
             "open_question": open_question,
             "invalidation_conditions": invalidation_conditions,
+            "groups": groups,
+            "market_sentiment": market_sentiment,
             "review_date": review_date,
             "created_at": (created_at or datetime.now(timezone.utc)).isoformat(),
             "created_by": created_by,
             "drafted_by": drafted_by,
+            "review_status": "unreviewed",
+            "run_id": run_id,
         }
     )
 

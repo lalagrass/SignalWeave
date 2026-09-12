@@ -26,7 +26,9 @@ exists to de-identify it; nothing is published today.
 | `data/private/` | ignored | Identity maps, private annotations, worklogs, run records, and private stories with their updates and baskets. Run records get their own fixed subfolder in milestone 2; add it to `public_check`'s allowed private-zone subfolders at the same time, or tracked docs cannot name it. |
 | `data/reviewed/events/` | tracked when safe | Not yet implemented; de-identified records, introduced only when something needs to be published. |
 
-Prompts and method files are **tracked**, and must contain no source text.
+Prompts and method files are **tracked**, under `methods/` at the repo root
+(outside every `data/` zone so they are tracked by default), and must contain
+no source text.
 
 ## Records
 
@@ -67,9 +69,11 @@ append-only. No weights, no ordering, no score.
 | `extract` | Segment private transcripts and enforce candidate boundaries. | shipped boundary |
 | `review` | Append private keep, discard, or suggested-link decisions. | shipped, gate now pass-through |
 | `threads` | Append evidence to stories. | shipped |
-| `runs` | Record and re-read pipeline runs. | milestone 2 |
-| `propose` | Model-backed candidate proposer behind the existing protocol. | milestone 2 |
-| `export` | Emit story and basket for layer 1. | milestone 2 |
+| `runs` | Record and re-read pipeline runs. | shipped |
+| `basket` | Validate and store one story's instrument list. | shipped |
+| `propose` | Model-backed candidate, story, and basket proposers behind the existing protocol. | shipped |
+| `pipeline` | Deterministic orchestration: segment, propose, span check, story, basket. | shipped |
+| `export` | Emit story and basket for layer 1. | shipped |
 | `persona` | Derive evidence-backed research prompts from public corpus. | deferred |
 
 ## Boundaries

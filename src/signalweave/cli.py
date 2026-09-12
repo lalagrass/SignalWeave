@@ -4,6 +4,8 @@ import argparse
 from datetime import date, datetime
 from pathlib import Path
 
+from signalweave.basket import BasketValidationError
+from signalweave.export import export_baskets, write_export
 from signalweave.extract import (
     NoopCandidateProposer,
     draft_candidate_event,
@@ -11,6 +13,16 @@ from signalweave.extract import (
     segment_transcript,
     select_segment,
     write_candidate_draft,
+)
+from signalweave.pipeline import PipelineError, run_pipeline
+from signalweave.propose import (
+    AnthropicModelClient,
+    ModelBackedBasketProposer,
+    ModelBackedCandidateProposer,
+    ModelBackedStoryProposer,
+    ModelIdentity,
+    ProposeError,
+    load_method,
 )
 from signalweave.public_check import (
     PublicCheckConfigurationError,
@@ -23,6 +35,7 @@ from signalweave.review import (
     load_review,
     write_review,
 )
+from signalweave.runs import RunValidationError
 from signalweave.schema import EventValidationError, load_candidate_event
 from signalweave.threads import (
     ThreadValidationError,
@@ -69,20 +82,43 @@ def main(argv: list[str] | None = None) -> int:
     review_event.add_argument("--reason")
     review_event.add_argument("--thread", dest="suggested_thread")
     create_thread_command = commands.add_parser(
-        "create-thread", help="Create a private, human-owned research thread."
+        "create-thread", help="Create a private, machine- or human-authored story."
     )
     create_thread_command.add_argument("--thread-id", required=True)
     create_thread_command.add_argument("--mechanism", required=True)
     create_thread_command.add_argument("--open-question", required=True)
-    create_thread_command.add_argument("--invalidation-condition", action="append", required=True)
+    create_thread_command.add_argument(
+        "--invalidation-condition",
+        action="append",
+        required=True,
+        help="A condition that would prove the hypothesis wrong. May be repeated.",
+    )
+    create_thread_command.add_argument(
+        "--group",
+        action="append",
+        required=True,
+        dest="groups",
+        help="A category of instrument this story plausibly implicates. May be repeated.",
+    )
+    create_thread_command.add_argument("--market-sentiment", required=True)
     create_thread_command.add_argument("--review-date", required=True)
     create_thread_command.add_argument("--created-by", required=True)
     create_thread_command.add_argument("--drafted-by", required=True)
+    create_thread_command.add_argument("--run-id", required=True)
     create_thread_command.add_argument("--created-at")
     append_update = commands.add_parser(
         "append-thread-update", help="Append private evidence to a linked research thread."
     )
-    append_update.add_argument("review_path", type=Path)
+    append_update.add_argument(
+        "review_path",
+        type=Path,
+        nargs="?",
+        help="Path to the review YAML. Alternative to --review-id; exactly one is required.",
+    )
+    append_update.add_argument(
+        "--review-id",
+        help="Review id to resolve against data/inbox/reviews/. Alternative to review_path.",
+    )
     append_update.add_argument("--thread", required=True, dest="thread_id")
     append_update.add_argument("--event-id", required=True)
     append_update.add_argument("--update-id", required=True)
@@ -102,6 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     draft_event.add_argument("--date", required=True, dest="event_date")
     draft_event.add_argument("--segment", required=True, type=int, dest="segment_position")
     draft_event.add_argument("--event-id", required=True)
+    draft_event.add_argument("--drafted-by", required=True)
     show_thread = commands.add_parser(
         "show-thread", help="Print a private thread's header and its updates."
     )
@@ -110,6 +147,26 @@ def main(argv: list[str] | None = None) -> int:
         "list-threads", help="List private threads and mark those overdue as of a given date."
     )
     list_threads_command.add_argument("--as-of", required=True, dest="as_of")
+    run_pipeline_command = commands.add_parser(
+        "run-pipeline",
+        help="Segment a transcript and run it end to end: propose, span-check, story, basket.",
+    )
+    run_pipeline_command.add_argument("path", type=Path)
+    run_pipeline_command.add_argument("--source", required=True)
+    run_pipeline_command.add_argument("--document-id", required=True)
+    run_pipeline_command.add_argument("--date", required=True, dest="event_date")
+    run_pipeline_command.add_argument("--model-id", required=True)
+    run_pipeline_command.add_argument(
+        "--privacy-tier",
+        required=True,
+        choices=("local", "remote"),
+        help="This source's declared privacy tier (ADR-0009). 'local' refuses a remote model call.",
+    )
+    export_baskets_command = commands.add_parser(
+        "export-baskets", help="Emit one basket per story for MarketPulse to read."
+    )
+    export_baskets_command.add_argument("--as-of", required=True, dest="as_of")
+    export_baskets_command.add_argument("--out", required=True, dest="out_path", type=Path)
     args = parser.parse_args(argv)
 
     if args.command == "public-check":
@@ -182,9 +239,12 @@ def main(argv: list[str] | None = None) -> int:
                 mechanism=args.mechanism,
                 open_question=args.open_question,
                 invalidation_conditions=args.invalidation_condition,
+                groups=args.groups,
+                market_sentiment=args.market_sentiment,
                 review_date=args.review_date,
                 created_by=args.created_by,
                 drafted_by=args.drafted_by,
+                run_id=args.run_id,
                 created_at=created_at,
             )
             path = write_thread(thread, Path.cwd() / "data" / "private" / "threads")
@@ -193,6 +253,18 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"Thread created: {path}")
     elif args.command == "append-thread-update":
+        if (args.review_path is None) == (args.review_id is None):
+            print("Thread update failed: pass exactly one of review_path or --review-id")
+            return 1
+        threads_directory = Path.cwd() / "data" / "private" / "threads"
+        if not (threads_directory / args.thread_id / "thread.yaml").is_file():
+            print(f"Thread update failed: unknown thread: {args.thread_id}")
+            return 1
+        review_path = (
+            args.review_path
+            if args.review_path is not None
+            else Path.cwd() / "data" / "inbox" / "reviews" / f"{args.review_id}.yaml"
+        )
         try:
             added_at = (
                 datetime.fromisoformat(args.added_at) if args.added_at is not None else None
@@ -200,7 +272,7 @@ def main(argv: list[str] | None = None) -> int:
             update = create_thread_update(
                 thread_id=args.thread_id,
                 event_id=args.event_id,
-                review=load_review(args.review_path),
+                review=load_review(review_path),
                 update_id=args.update_id,
                 evidence_role=args.evidence_role,
                 summary=args.summary,
@@ -209,7 +281,7 @@ def main(argv: list[str] | None = None) -> int:
                 drafted_by=args.drafted_by,
                 added_at=added_at,
             )
-            path = append_thread_update(update, Path.cwd() / "data" / "private" / "threads")
+            path = append_thread_update(update, threads_directory)
         except (ReviewValidationError, ThreadValidationError, OSError, UnicodeDecodeError, ValueError) as error:
             print(f"Thread update failed: {error}")
             return 1
@@ -224,7 +296,10 @@ def main(argv: list[str] | None = None) -> int:
             )
             segment = select_segment(segments, args.segment_position)
             record = draft_candidate_event(
-                segment, event_id=args.event_id, event_date=args.event_date
+                segment,
+                event_id=args.event_id,
+                event_date=args.event_date,
+                drafted_by=args.drafted_by,
             )
             path = write_candidate_draft(record, Path.cwd() / "data" / "inbox" / "events")
         except (EventValidationError, OSError, UnicodeDecodeError, ValueError) as error:
@@ -241,12 +316,15 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"Thread: {thread.thread_id}")
         print(f"Mechanism: {thread.mechanism}")
+        print(f"Groups: {', '.join(thread.groups)}")
+        print(f"Market sentiment: {thread.market_sentiment}")
         print(f"Open question: {thread.open_question}")
         print("Invalidation conditions:")
         for condition in thread.invalidation_conditions:
             print(f"- {condition}")
         print(f"Review date: {thread.review_date.isoformat()}")
         print(f"Created by: {thread.created_by} (drafted by: {thread.drafted_by})")
+        print(f"Review status: {thread.review_status} (run: {thread.run_id})")
         for heading, role in (("Supporting evidence", "supporting"), ("Counter evidence", "counter")):
             print(f"\n{heading}:")
             role_updates = [update for update in updates if update.evidence_role == role]
@@ -277,6 +355,83 @@ def main(argv: list[str] | None = None) -> int:
             print(f"List threads failed: {error}")
             return 1
         print("\n".join(lines) if lines else "No threads found.")
+    elif args.command == "run-pipeline":
+        identity = ModelIdentity(
+            provider="anthropic", model_id=args.model_id, model_locality="remote"
+        )
+        if args.privacy_tier == "local" and identity.model_locality == "remote":
+            # Refuse before constructing a client (which needs a real API key)
+            # so a local-only source never even asks for one, let alone calls out.
+            print(
+                "Pipeline run failed: source is marked local-only; refusing to "
+                "send it to a remote model provider"
+            )
+            return 1
+        try:
+            date.fromisoformat(args.event_date)
+            methods_directory = Path.cwd() / "methods"
+            runs_directory = Path.cwd() / "data" / "private" / "runs"
+            client = AnthropicModelClient(model_id=args.model_id)
+            candidate_proposer = ModelBackedCandidateProposer(
+                client,
+                identity,
+                method_template=load_method("propose_v1", methods_directory),
+                event_date=args.event_date,
+                runs_directory=runs_directory,
+            )
+            story_proposer = ModelBackedStoryProposer(
+                client,
+                identity,
+                method_template=load_method("story_v1", methods_directory),
+                runs_directory=runs_directory,
+            )
+            basket_proposer = ModelBackedBasketProposer(
+                client,
+                identity,
+                method_template=load_method("basket_v1", methods_directory),
+                runs_directory=runs_directory,
+            )
+            result = run_pipeline(
+                args.path,
+                source=args.source,
+                document_id=args.document_id,
+                event_date=args.event_date,
+                privacy_tier=args.privacy_tier,
+                candidate_proposer=candidate_proposer,
+                story_proposer=story_proposer,
+                basket_proposer=basket_proposer,
+                identity=identity,
+                inbox_events_directory=Path.cwd() / "data" / "inbox" / "events",
+                threads_directory=Path.cwd() / "data" / "private" / "threads",
+            )
+        except (
+            PipelineError,
+            ProposeError,
+            EventValidationError,
+            ThreadValidationError,
+            BasketValidationError,
+            RunValidationError,
+            OSError,
+            UnicodeDecodeError,
+            ValueError,
+        ) as error:
+            print(f"Pipeline run failed: {error}")
+            return 1
+        print(
+            f"Pipeline run wrote story {result.thread_id}: "
+            f"{len(result.event_paths)} event(s) from "
+            f"{result.segments_total - result.segments_skipped}/{result.segments_total} "
+            "segment(s)."
+        )
+    elif args.command == "export-baskets":
+        try:
+            as_of = date.fromisoformat(args.as_of)
+            entries = export_baskets(Path.cwd() / "data" / "private" / "threads", as_of=as_of)
+            path = write_export(entries, args.out_path, as_of=as_of)
+        except (BasketValidationError, ThreadValidationError, OSError, ValueError) as error:
+            print(f"Export failed: {error}")
+            return 1
+        print(f"Exported {len(entries)} stor{'y' if len(entries) == 1 else 'ies'} to {path}")
     return 0
 
 

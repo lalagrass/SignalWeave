@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 import signalweave.cli as cli_module
+from signalweave.basket import create_basket, write_basket
 from signalweave.cli import main
 from signalweave.pipeline import REVIEW_CADENCE_DAYS
 
@@ -460,6 +461,73 @@ run_id: run_synthetic001
     assert "(none)" in output[counter_index:]
     assert "evt_2026_001" in output
     assert "review_2026_001" in output
+
+
+def _create_thread(tmp_path: Path, thread_id: str = "thread_supply_constraint") -> None:
+    assert (
+        main(
+            [
+                "create-thread",
+                "--thread-id",
+                thread_id,
+                "--mechanism",
+                "A synthetic mechanism.",
+                "--open-question",
+                "A synthetic question?",
+                "--invalidation-condition",
+                "A synthetic invalidation condition.",
+                "--group",
+                "synthetic upstream suppliers",
+                "--market-sentiment",
+                "Synthetic cautiously positive sentiment.",
+                "--review-date",
+                "2026-12-15",
+                "--created-by",
+                "researcher_a",
+                "--drafted-by",
+                "researcher_a",
+                "--run-id",
+                "run_synthetic001",
+                "--created-at",
+                "2026-09-11T00:00:00+00:00",
+            ]
+        )
+        == 0
+    )
+
+
+def test_show_thread_prints_basket_instruments_when_present(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _create_thread(tmp_path)
+    threads_directory = tmp_path / "data" / "private" / "threads"
+    basket = create_basket(
+        thread_id="thread_supply_constraint",
+        instruments=["tsmc", "asml"],
+        drafted_by="model_synthetic",
+        run_id="run_synthetic002",
+    )
+    write_basket(basket, threads_directory)
+    capsys.readouterr()
+
+    assert main(["show-thread", "thread_supply_constraint"]) == 0
+    output = capsys.readouterr().out
+
+    assert "Basket: tsmc, asml" in output
+
+
+def test_show_thread_prints_basket_none_when_missing(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _create_thread(tmp_path)
+    capsys.readouterr()
+
+    assert main(["show-thread", "thread_supply_constraint"]) == 0
+    output = capsys.readouterr().out
+
+    assert "Basket: (none)" in output
 
 
 def test_list_threads_marks_overdue_only_from_the_supplied_as_of_date(

@@ -4,7 +4,7 @@ import argparse
 from datetime import date, datetime
 from pathlib import Path
 
-from signalweave.basket import BasketValidationError
+from signalweave.basket import BasketValidationError, load_basket
 from signalweave.export import export_baskets, write_export
 from signalweave.extract import (
     NoopCandidateProposer,
@@ -314,6 +314,13 @@ def main(argv: list[str] | None = None) -> int:
         except (ThreadValidationError, OSError, UnicodeDecodeError, ValueError) as error:
             print(f"Show thread failed: {error}")
             return 1
+        basket = None
+        if (thread_directory / "basket.yaml").is_file():
+            try:
+                basket = load_basket(thread_directory)
+            except (BasketValidationError, OSError, UnicodeDecodeError, ValueError) as error:
+                print(f"Show thread failed: {error}")
+                return 1
         print(f"Thread: {thread.thread_id}")
         print(f"Mechanism: {thread.mechanism}")
         print(f"Groups: {', '.join(thread.groups)}")
@@ -325,6 +332,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Review date: {thread.review_date.isoformat()}")
         print(f"Created by: {thread.created_by} (drafted by: {thread.drafted_by})")
         print(f"Review status: {thread.review_status} (run: {thread.run_id})")
+        if basket is None:
+            print("Basket: (none)")
+        elif basket.instruments:
+            print(f"Basket: {', '.join(basket.instruments)}")
+        else:
+            print("Basket: (empty)")
         for heading, role in (("Supporting evidence", "supporting"), ("Counter evidence", "counter")):
             print(f"\n{heading}:")
             role_updates = [update for update in updates if update.evidence_role == role]

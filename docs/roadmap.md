@@ -2,7 +2,7 @@
 
 ## Project state
 
-**Current phase:** 5 — reviewed event promotion v0
+**Current phase:** 5 — milestone 2, transcript navigation v0
 
 The development, privacy, and handoff contract is complete. Candidate event
 cards have a validated schema and CLI. Private transcripts can be segmented in
@@ -112,19 +112,80 @@ A planning review of this item found three defects, fixed before push:
    actually reviewed its wording. See
    [ADR-0007](decisions/ADR-0007-split-drafted-by-from-created-by.md).
 
-## Now: reviewed event promotion v0
+## Milestone 2: real material in, baskets out
 
-**Status:** next implementation item.
+Milestone 1 built the loop and proved it closes. It closed on a one-paragraph
+post, with the free-text fields written by an implementing agent, and it produces
+records that no other tool can read.
 
-**Goal:** Introduce a de-identification step that promotes a reviewed candidate
-into a safe tracked event record without copying raw source content.
-Deliberately sequenced after the first walkthrough: the de-identification
-rules should be designed against real candidate and review records rather
-than imagined ones. The walkthrough's own demo records were invalidated (see
-above), so this item starts from a fresh inbox rather than reusing them.
+Milestone 2 is finished when the reviewer has run their own real material through
+the loop repeatedly, without help, and the threads that result name the
+instruments they implicate. Two code items, then a deliberate pause.
 
-**Out of scope:** AI provider integration, research persona, thread promotion
-or merging, market verdicts.
+## Now: transcript navigation v0
+
+**Status:** next implementation item. Contract in
+`docs/specs/transcript-navigation-v0.md`.
+
+**Goal:** Make the loop workable on a 200-line transcript rather than a
+one-paragraph post.
+
+- `list-segments` prints position, locator, and character count — never text.
+- A PO decision on narrowing ADR-0003's no-echo rule for an explicit,
+  human-invoked terminal print; implemented as `--show` if accepted, dropped
+  entirely if not. No middle option.
+- Three friction fixes from the first walkthrough: `--review-id` lookup,
+  early validation of an unknown `--thread`, repeatable flags documented.
+
+**Acceptance:** one real transcript run end to end by the reviewer — at least
+three cards, one thread, two updates — with `drafted_by` recording that a human
+wrote the free text. This is the first real test of the ten-minute criterion.
+
+## Next: thread exposure v0
+
+**Status:** specified, blocked on a PO decision. Contract in
+`docs/specs/thread-exposure-v0.md`.
+
+**Goal:** Give a thread the three baskets it implies — `if_true`, `if_false`,
+`either_way` — and an export that another tool can consume. No weights, no
+ordering, no scores. SignalWeave never fetches a price and never ranks a thread;
+the export is the boundary.
+
+**Decision required first:** whether SignalWeave becomes the only place stories
+are authored, with MarketPulse's narrative layer retired to a consumer of
+exported baskets. Two schemas for one object is the failure mode this item
+exists to avoid.
+
+## Then: usage gate — no code
+
+Not an implementation item. After the two items above, run the loop on real
+material for two weeks with no new features. The gate passes when the reviewer
+can point at a thread and say either "this told me something I did not already
+know" or "this is where it is wrong".
+
+Reopen conditions for further development: a specific sentence about what was
+missing. "It would be nice if" does not reopen it. If the tool is not opened
+during those two weeks, that is the finding, and the next item is to ask why
+rather than to build.
+
+## Then: candidate proposer v0
+
+**Gated on:** at least twenty human-written candidate summaries in the private
+inbox.
+
+The proposer is the point of the product and the fastest way to ruin it. With
+nothing to imitate and nothing to evaluate against, its output cannot be judged,
+and a review gate that rubber-stamps is worse than no gate. The twenty cards are
+both the style reference and the evaluation set: a proposer is accepted only if
+the reviewer keeps its cards at a rate they would defend out loud.
+
+## Deferred: reviewed event promotion v0
+
+Moved back from "Now". Promotion exists to make records safe to publish, and
+nothing is being published: there is one local reviewer and no remote audience.
+Building de-identification before there is a reason to publish means designing
+rules against imagined requirements and maintaining them for nobody. Reopen when
+a second person needs to read a record, or when a record must leave the machine.
 
 ## Deferred: research persona v0.1
 

@@ -73,3 +73,54 @@ time — deterministic and testable. Consider an equivalent for an overdue
 Evidence-synthesis and screening tools (ASReview, Covidence-likes) share the
 inbox-and-decision shape but assume a large literature corpus and a one-off
 review, not a small stream of recurring private sources with living threads.
+
+## Re-survey 2026-09-12 — two families the first pass missed
+
+The 2026-09-11 conclusion stands: no project implements the loop end to end.
+A second pass found two more neighbour families worth naming, both of which own
+the *revisit* stage the first survey treated as ours alone.
+
+### Family 5 — argument mapping
+
+- `Argdown` — text-based markup for argument reconstruction (claims, premises,
+  objections) with a VS Code extension and rendered maps. Actively maintained.
+- `Argunet`, Kialo, Socratrees, Arguman — graph or web tools for claim/counter
+  structure.
+
+Borrow: Argdown's plain-text-first stance is the same bet SignalWeave makes —
+records a human can read and diff without the tool. Do not borrow the map: a
+rendered graph invites completeness, and a thread is deliberately incomplete.
+
+Missing for our case: no ingestion, no dated history, no review gate, no privacy
+boundary, no exposure. An argument map has no idea *when* it should be revisited.
+
+### Family 6 — forecasting journals
+
+- `Sage-Future/fatebook` (MIT, ~59 stars, actively developed) — make a
+  prediction, set a resolution date, get reminded, resolve it, see your track
+  record. Slack and browser extensions.
+- Manifund / LessWrong write-ups on self-grading prediction logs describe the
+  same failure this project should expect: people log predictions and never
+  come back to resolve them.
+
+This is the closest analogue to the thread `review_date` and overdue flag, and
+the first survey missed it by looking only at investment tooling.
+
+Borrow: the resolution mechanic — a record is not finished until it has been
+*closed*, and the tool's most valuable screen is the one showing what is overdue.
+Fatebook's lesson is that the reminder is the product, not the entry form.
+
+Do not borrow: a scalar probability and a Brier score. A thread is a mechanism,
+not a binary question, and a calibration number would become the verdict the
+product boundary rejects. The SignalWeave equivalent of "resolve" is a dated
+outcome record — held / invalidated / still open — with the reason in the
+reviewer's words.
+
+### Field match, re-checked
+
+`SergioYin/invest-thesis-ledger` has kept moving (v1.10.1): it now carries
+catalysts with dated windows, position rules, decision packets, deterministic
+date-free output, and hygiene checks that refuse buy/sell language. Still
+asset-centric, still hand-fed, still no candidate inbox and no source-privacy
+contract. It remains the closest field match and the clearest proof that the
+ingestion lens plus the review gate is the part nobody has built.

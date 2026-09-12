@@ -149,18 +149,24 @@ this item's completion.
 
 ## Next: thread exposure v0
 
-**Status:** specified, blocked on a PO decision. Contract in
-`docs/specs/thread-exposure-v0.md`.
+**Status:** specified, next implementation item after transcript navigation
+v0. Contract in `docs/specs/thread-exposure-v0.md`.
 
 **Goal:** Give a thread the three baskets it implies — `if_true`, `if_false`,
 `either_way` — and an export that another tool can consume. No weights, no
 ordering, no scores. SignalWeave never fetches a price and never ranks a thread;
 the export is the boundary.
 
-**Decision required first:** whether SignalWeave becomes the only place stories
-are authored, with MarketPulse's narrative layer retired to a consumer of
-exported baskets. Two schemas for one object is the failure mode this item
-exists to avoid.
+**The seam is decided, not open:** SignalWeave is the only place a story is
+authored and reviewed; MarketPulse consumes the export and does relative
+strength, and stops authoring narratives. Two schemas for one object was the
+failure mode this decision avoids. Retiring MarketPulse's narrative layer and
+migrating its existing branches is separate follow-up work on MarketPulse's
+side, not part of this item.
+
+**Acceptance:** synthetic threads and instruments only, plus a throwaway
+script proving the export is readable outside SignalWeave. No real thread's
+baskets need to be filled and no MarketPulse code changes here.
 
 ## Then: usage gate — no code
 

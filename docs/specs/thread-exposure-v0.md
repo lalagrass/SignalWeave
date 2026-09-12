@@ -3,7 +3,6 @@
 **Milestone:** 2 — real material in, baskets out
 **Roadmap item:** thread exposure v0 (follows transcript navigation v0)
 **Appetite:** one session.
-**Blocked on a PO decision:** see "The seam" below.
 
 ## Why
 
@@ -21,7 +20,7 @@ already carries branches with three baskets, and SignalWeave carries threads.
 Maintaining both means maintaining two schemas for one idea, and the usual
 outcome is that neither is kept current.
 
-Proposed split — **PO confirms before implementation**:
+The split is decided. This is the rule, not a proposal:
 
 - SignalWeave is the only place a story is authored and reviewed. It owns
   events, threads, evidence, review dates, and baskets.
@@ -29,6 +28,12 @@ Proposed split — **PO confirms before implementation**:
   relative strength. It stops authoring narratives.
 - SignalWeave never fetches a price, never ranks a thread, never scores a
   basket. The export is the boundary.
+
+This settles authorship and the shape of the boundary. It does not obligate
+this item to touch MarketPulse's code, retire its narrative layer, or migrate
+any of its existing branches — that migration is separate work, on
+MarketPulse's side, done after this export exists and is proven readable. See
+"Not part of this spec's acceptance" below.
 
 ## DO-1 — exposure record
 
@@ -57,13 +62,30 @@ another tool without carrying private research with it.
 
 ## Acceptance
 
-1. Verification commands pass; tests use synthetic instruments only.
-2. Every thread created during the transcript run gets its baskets filled by the
-   reviewer, and at least one thread has an empty `if_false` — that emptiness is
-   recorded in the worklog as a finding about the thread, not patched over.
-3. The export is read successfully by the consuming tool in a throwaway script.
-   Nothing is integrated in this item; the point is only to prove the contract
-   survives the boundary.
+Acceptance for this spec is synthetic only. It is done when:
+
+1. Verification commands pass (`uv run --no-sync pytest`,
+   `uv run --no-sync signalweave public-check`); tests use synthetic threads
+   and synthetic instrument identifiers only — no real thread and no real
+   instrument is required.
+2. Tests cover an empty basket on synthetic data (e.g. an empty `if_false`)
+   passing validation and printing as a finding, not an error, and confirm no
+   weight, order, count, or score can be attached to a basket.
+3. A throwaway script — not part of the package, not committed, run once and
+   discarded — reads the export written by `export-baskets` on synthetic data
+   and confirms it can get thread id, review date, overdue flag, and all three
+   baskets out of it without any SignalWeave code. This proves the contract
+   survives the boundary; it is not an integration.
+
+## Not part of this spec's acceptance
+
+Filling in real baskets on threads from the PO's own real-transcript
+walkthrough, and any work on MarketPulse's side — retiring its narrative
+layer, migrating existing branches to consume this export, wiring the export
+into its relative-strength tracking — are separate follow-up work, not this
+item. This item ships when the export format exists, is documented, and is
+provably readable by an outside script; what MarketPulse does with it next is
+out of scope here.
 
 ## Out of scope
 

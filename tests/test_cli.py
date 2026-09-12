@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import shutil
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -694,7 +694,14 @@ def test_export_baskets_writes_one_flat_basket_per_story(
     assert main(["export-baskets", "--as-of", "2026-09-20", "--out", str(out_path)]) == 0
     assert "Exported 1 story" in capsys.readouterr().out
 
-    expected_review_date = date.today() + timedelta(days=REVIEW_CADENCE_DAYS)
+    # Match pipeline.py's own datetime.now(timezone.utc): using local date.today()
+    # here is flaky for a few hours around local midnight whenever local and
+    # UTC disagree on the calendar date (pre-existing bug, unrelated to this
+    # change — fixed in passing so the suite is not flaky at the moment this
+    # test happens to run).
+    expected_review_date = datetime.now(timezone.utc).date() + timedelta(
+        days=REVIEW_CADENCE_DAYS
+    )
     exported = yaml.safe_load(out_path.read_text(encoding="utf-8"))
     assert exported["stories"] == [
         {
@@ -702,6 +709,9 @@ def test_export_baskets_writes_one_flat_basket_per_story(
             "review_date": expected_review_date.isoformat(),
             "overdue": expected_review_date < date(2026, 9, 20),
             "basket": ["tsmc", "asml"],
+            "mechanism": "A synthetic mechanism.",
+            "groups": ["synthetic upstream suppliers"],
+            "market_sentiment": "Synthetic cautiously positive sentiment.",
         }
     ]
 

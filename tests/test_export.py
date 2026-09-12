@@ -58,6 +58,9 @@ def test_export_baskets_emits_one_flat_basket_per_story(tmp_path: Path) -> None:
             "review_date": "2026-12-15",
             "overdue": False,
             "basket": ["tsmc", "asml"],
+            "mechanism": "A synthetic mechanism that must never appear in the export.",
+            "groups": ["synthetic upstream suppliers"],
+            "market_sentiment": "Synthetic sentiment that must never appear in the export.",
         }
     ]
 
@@ -77,7 +80,10 @@ def test_export_baskets_marks_overdue_from_as_of(tmp_path: Path) -> None:
     assert entries[0]["basket"] == []
 
 
-def test_export_contains_nothing_source_derived(tmp_path: Path) -> None:
+def test_export_includes_mechanism_groups_and_market_sentiment(tmp_path: Path) -> None:
+    """Corrected 2026-09-13: these are model-synthesized story fields, already
+    shown by show-thread, not raw source text — the export is no longer
+    missing them (see milestone-2-v0.md scope item 5's correction note)."""
     threads_directory = tmp_path / "data" / "private" / "threads"
     seed_story(
         threads_directory,
@@ -88,7 +94,25 @@ def test_export_contains_nothing_source_derived(tmp_path: Path) -> None:
 
     entries = export_baskets(threads_directory, as_of=date(2026, 9, 20))
 
-    assert set(entries[0].keys()) == {"thread_id", "review_date", "overdue", "basket"}
+    assert set(entries[0].keys()) == {
+        "thread_id",
+        "review_date",
+        "overdue",
+        "basket",
+        "mechanism",
+        "groups",
+        "market_sentiment",
+    }
+    assert entries[0]["mechanism"] == (
+        "A synthetic mechanism that must never appear in the export."
+    )
+    assert entries[0]["groups"] == ["synthetic upstream suppliers"]
+    assert entries[0]["market_sentiment"] == (
+        "Synthetic sentiment that must never appear in the export."
+    )
+    # open_question and invalidation_conditions are still excluded — not asked for.
+    assert "open_question" not in entries[0]
+    assert "invalidation_conditions" not in entries[0]
 
 
 def test_write_export_round_trips_via_yaml(tmp_path: Path) -> None:

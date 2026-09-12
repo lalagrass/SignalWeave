@@ -2,9 +2,16 @@
 
 Command surface reused from `docs/specs/thread-exposure-v0.md` DO-2
 (thread/story id, review date, overdue flag) with the milestone-2 basket
-shape: one flat instrument list per story, not a three-way split. Nothing
-source-derived — no summary, no mechanism text, only what a story's basket
-membership needs.
+shape: one flat instrument list per story, not a three-way split.
+
+Includes `mechanism`, `groups`, and `market_sentiment` — the same fields
+`show-thread` already prints — read straight from the thread, unreworded.
+These are model-synthesized from already-abstracted candidate events, never
+raw transcript text, so exporting them carries no privacy issue; only raw
+source text must never leave SignalWeave, and that is unchanged (see
+`docs/specs/milestone-2-v0.md` scope item 5's correction note). Deliberately
+excluded: `open_question` and `invalidation_conditions` — not asked for, and
+not needed by anything reading this export today.
 """
 
 from __future__ import annotations
@@ -32,6 +39,9 @@ def export_baskets(threads_directory: Path, *, as_of: date) -> list[dict[str, An
                 "review_date": thread.review_date.isoformat(),
                 "overdue": thread.review_date < as_of,
                 "basket": list(basket.instruments),
+                "mechanism": thread.mechanism,
+                "groups": list(thread.groups),
+                "market_sentiment": thread.market_sentiment,
             }
         )
     return entries

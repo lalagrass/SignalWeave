@@ -1,19 +1,27 @@
 # SignalWeave
 
 SignalWeave is a local, source-agnostic research-memory tool. It turns private
-transcripts and posts into reviewable event cards and evolving research threads.
-Market data may be attached as an independent observation; it never decides
-whether a thread is true.
+transcripts and posts into stories, each carrying a basket of instruments that
+another tool can track. Market data is an independent observation; it never
+decides whether a story is true, and SignalWeave never fetches a price.
 
 ## What ships first
 
 1. Keep source material private and local.
-2. Produce candidate event cards in an inbox for human review.
-3. Promote accepted cards into dated, append-only research threads.
-4. Show each thread's evidence, counter-evidence, open question, and review date.
+2. Read a source into a story — groups, context, market sentiment — and a
+   deliberately wide basket of possibly-implicated instruments.
+3. Export the story and its basket so layer 1 can track relative strength.
+4. Let the basket change over time as later sources and earnings arrive.
+
+Records are machine-authored and the review gate is pass-through: nothing waits
+for a human, and every record is stamped `review_status: unreviewed` with who
+drafted it and which run produced it, so a record that was never judged is never
+mistaken for one that was. See
+[ADR-0008](docs/decisions/ADR-0008-machine-authored-records-and-pass-through-gate.md)
+and [ADR-0009](docs/decisions/ADR-0009-model-provider-boundary.md).
 
 The product is deliberately not a trading system, a prediction engine, or an
-automatic truth classifier.
+automatic truth classifier. No command prints a number claiming a record is good.
 
 ## Privacy and publishing
 
@@ -83,7 +91,9 @@ uv run --no-sync signalweave extract-transcript path/to/private.md \
 ## Review a candidate event
 
 Review decisions are immutable private records. They do not modify the candidate
-card or any thread:
+card or any thread. Under ADR-0008 the gate is pass-through, so this command is
+for recording a judgement that a human actually made — it is not a step the
+pipeline waits on:
 
 ```bash
 uv run --no-sync signalweave review-event path/to/candidate.yaml \

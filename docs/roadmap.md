@@ -2,208 +2,133 @@
 
 ## Project state
 
-**Current phase:** 5 — milestone 2, transcript navigation v0
+**Current phase:** milestone 2 — first analysis, end to end, one page
 
-The development, privacy, and handoff contract is complete. Candidate event
-cards have a validated schema and CLI. Private transcripts can be segmented in
-memory through a model-independent dry-run boundary. Candidate reviews are
-recorded as private, append-only decisions. Research threads and their updates
-are implemented and verified. The loop has been closed end to end and run once
-on a real private document: a candidate can be hand-drafted from a segment
-locator, reviewed, linked into a thread, and the resulting thread read back
-from the command line.
+Milestone 1 is complete: the loop closes. Candidate cards have a validated
+schema, transcripts segment through a model-independent boundary, reviews and
+threads are append-only, and a thread reads back deterministically.
+
+**Plan revision, 2026-09-12.** The plan that milestone 1 was built against
+assumed a human author for every free-text field, and gated an AI proposer on
+twenty hand-written candidate summaries. There is no such human — the team is two
+engineers — so that gate was a deadlock. Records are now machine-authored with a
+pass-through review gate ([ADR-0008](decisions/ADR-0008-machine-authored-records-and-pass-through-gate.md)),
+raw source may reach a model provider under recorded conditions
+([ADR-0009](decisions/ADR-0009-model-provider-boundary.md)), and a basket starts
+deliberately wide and is pruned over time rather than being filled precisely.
+
+Every milestone below is accepted on something a reader can look at. Tests still
+have to pass; they are not the deliverable.
 
 **Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
 `uv run --no-sync pytest` (56 passed), and
-`uv run --no-sync signalweave public-check` (with
-`.signalweave/private_terms.txt` configured locally) passed on 2026-09-12.
+`uv run --no-sync signalweave public-check` passed on 2026-09-12.
 
-## Completed: candidate event schema v0
+## Completed
 
-The shared contract for all future lenses is implemented. Candidate cards
-require traceability and uncertainty, and cannot mark themselves as accepted.
+- **Candidate event schema v0** — traceability and uncertainty required; a card
+  cannot mark itself accepted.
+- **Transcript extraction boundary v0** — in-memory segmentation, stable local
+  locators, model-independent `CandidateProposer` protocol, no-write dry run.
+- **Inbox review v0** — append-only `keep_unlinked` / `discard` /
+  `link_to_thread` records that cannot mutate a thread.
+- **Research threads v0** — human-owned threads with mechanism, open question,
+  invalidation conditions and review date; dated append-only updates.
+- **First walkthrough v0** — `draft-event`, `show-thread`,
+  `list-threads --as-of`; the loop run once end to end on a real document.
+  Three defects found in planning review and fixed (private path amended out of
+  history, `public-check` gated on configuration, `drafted_by` split from
+  ownership).
 
-Verification passed:
+## Milestone 2: first analysis, end to end, one page
 
-```text
-uv sync --no-editable
-uv run --no-sync pytest
-uv run --no-sync signalweave validate-event examples/event-card.example.yaml
-uv run --no-sync signalweave public-check
-```
+Transcript → story (groups, context, market sentiment) → a deliberately wide
+basket → export → layer 1 tracks the basket → one page.
 
-## Completed: transcript extraction boundary v0
+Everything machine-made, everything stamped `review_status: unreviewed`.
 
-Private transcript segmentation, stable local locators, a model-independent
-proposer protocol, and no-write CLI dry-run are implemented. The boundary
-enforces the original segment locator and `proposed` review status for every
-candidate it receives.
+**Prerequisite, to verify before writing the spec:** can MarketPulse's layer 1
+compute relative strength for an arbitrary list of instruments that are not in
+`themes/v1.yaml`? The main rank is built on theme membership plus PIT rules. If
+the RS path is bound to theme membership, "put in anything plausibly implicated"
+has nowhere to land, and this milestone gains a prerequisite item: let layer 1
+compute RS for an arbitrary ticker list, outside the main rank pool, keeping the
+existing "baskets shown side by side, never ranked" constraint.
 
-## Completed: inbox review v0
+Scope:
 
-Reviewers can append private `keep_unlinked`, `discard`, or `link_to_thread`
-records. A link is only a suggestion; it cannot mutate a thread. The CLI never
-overwrites a review record.
+1. **Run record** — one file per run: model id, method version, verbatim output.
+   No content addressing. This is the only part that cannot be added later: a run
+   that was not recorded is gone.
+2. **Method files** — versioned prompts tracked in the repo, carrying no source
+   text, so a method change is a reviewable patch.
+3. **Pipeline** — segment → propose per segment → span check → story draft →
+   basket. Deterministic orchestration with model steps inside it, not an agent
+   loop; every step's input and output are storable, which is what makes a run
+   re-runnable.
+4. **Pass-through gate** — every record carries `review_status: unreviewed`,
+   `drafted_by`, and its run id.
+5. **Export** — story and basket, no price, no ranking. `export-baskets` as
+   specified in `docs/specs/thread-exposure-v0.md`.
+6. **The page** — rendered by MarketPulse, which owns price: story context, the
+   basket, and the basket's relative strength, on one page.
 
-## Completed: research threads v0
+Also folded in: the three friction fixes from
+`docs/specs/transcript-navigation-v0.md` (DO-3), if still relevant.
 
-Human-owned threads require a mechanism, open question, invalidation conditions,
-and a review date. Updates are separate dated files under
-`data/private/threads/<thread_id>/updates/`. An update can only be created from a
-`link_to_thread` review whose `event_id` matches, and neither a thread nor an
-update can be overwritten. Verified and committed on 2026-09-12.
+**Acceptance:** the page exists, built unattended from one real transcript, and a
+reader can say what story is being told and whether the basket is strengthening.
+"Interesting" and "garbage" are both results.
 
-## Completed: first walkthrough v0
+## Milestone 3: the basket changes
 
-`draft-event` writes a candidate skeleton into `data/inbox/events/` carrying the
-segment's own locator and no source-derived text; it fails validation until a
-human writes `kind`, `summary`, and `uncertainty`. `show-thread` prints a
-thread's header and its dated updates with supporting and counter evidence
-under separate headings, drawing no conclusion from their balance.
-`list-threads --as-of <date>` marks a thread overdue from the supplied date
-only, computed without ever calling the wall clock. `docs/architecture.md` now
-records threads as private (`data/private/threads/`) until a promotion step
-exists.
+Dated membership changes with reasons, visible history, and a dispersion flag —
+a name behaving unlike the rest of its basket is surfaced to look at, never
+judged and never ranked. A story whose basket and strength have both been
+unchanged for several weeks is marked `parked`, reusing MarketPulse's existing
+`stage` field rather than inventing a new one.
 
-One timed walkthrough was run on one real private document, held locally
-under an ignored path and referred to here only as `source_a`/`doc_2026_101`:
-import → draft → fill → validate → review with `link_to_thread` → create
-thread → append update → `show-thread`. The back-to-back command sequence
-took about 35 seconds; the reviewer's own free-text judgment calls (summary,
-mechanism, open question, invalidation conditions) are not part of that
-measurement. Friction notes are in ignored `data/private/worklog/`; none of
-them blocked completion. The ten-minute success criterion is therefore *not*
-yet verified: in this run the free-text fields were written by the
-implementing agent rather than by a reviewer reading the document, so what
-was measured is the mechanical command sequence, not the human loop. Durable
-design choices are recorded in
-[ADR-0005](decisions/ADR-0005-manual-drafting-and-deterministic-readback.md).
+**Acceptance:** for one story, the basket has changed two episodes later, and the
+page shows why.
 
-Verification passed:
+## Milestone 4: second analysis — post lens
 
-```text
-uv sync --no-editable --reinstall-package signalweave
-uv run --no-sync pytest        # 45 passed
-uv run --no-sync signalweave public-check
-```
+From an instrument in a post, infer several competing candidate themes, grow each
+into its own story and basket, and track them side by side. Two candidates that
+produce the same basket are the same story for tracking purposes and are merged —
+if they cannot be told apart by basket, they cannot be told apart by strength.
 
-### Follow-up fixes (planning review, 2026-09-12)
+**Acceptance:** one post grows at least two competing stories, and two weeks
+later the page shows which is stronger.
 
-A planning review of this item found three defects, fixed before push:
+## Milestone 5: third analysis — standing experiment slot
 
-1. **Privacy leak (blocking).** The `e3be52a` commit named a real private
-   source path in this file. Amended into that commit rather than fixed
-   forward, so the leak never existed in pushed history. `git grep` across
-   the full history of both unpushed commits found no other real source
-   name, path, or document date.
-2. **`public-check` passed while unconfigured.** A missing
-   `.signalweave/private_terms.txt` made the term scan a silent no-op, which
-   is exactly how defect 1 went uncaught. `public-check` now refuses to run
-   without that file (or an explicit `--allow-unconfigured`), and separately
-   flags any tracked file naming a concrete path under `data/raw/`,
-   `data/inbox/`, or `data/private/`. See
-   [ADR-0006](decisions/ADR-0006-public-check-fails-loud-when-unconfigured.md).
-3. **Misattributed authorship.** The walkthrough's thread and update recorded
-   `created_by`/`added_by` as the human owner for free text the implementing
-   agent actually wrote. `ResearchThread` and `ThreadUpdate` now require a
-   separate `drafted_by`, shown by `show-thread` next to the owner. The one
-   affected record (`thread_component_cost_passthrough`, private and
-   git-ignored) was invalidated rather than migrated, since no human had
-   actually reviewed its wording. See
-   [ADR-0007](decisions/ADR-0007-split-drafted-by-from-created-by.md).
+No completion date, deliberately. One experiment per cycle, referencing current
+market and open-source practice, with no promised outcome.
 
-## Milestone 2: real material in, baskets out
+First experiment: predict what the next episode will cover, then check against
+the episode when it lands. It needs no investment expertise to score, the
+feedback cycle is one week, and it measures the thing this analysis is actually
+after — whether the pipeline has caught the story context being tracked.
 
-Milestone 1 built the loop and proved it closes. It closed on a one-paragraph
-post, with the free-text fields written by an implementing agent, and it produces
-records that no other tool can read.
+The ceiling is worth stating: restating what a transcript said is not hard; a
+professional eye is about what was *not* said, and there is no clean open-source
+answer to that today.
 
-Milestone 2 is finished when the reviewer has run their own real material through
-the loop repeatedly, without help, and the threads that result name the
-instruments they implicate. Two code items, then a deliberate pause.
+## Deferred
 
-## Now: transcript navigation v0
+Moved back until the pipeline is actually running, because until then there is no
+evidence about whether they are needed:
 
-**Status:** next implementation item. Contract in
-`docs/specs/transcript-navigation-v0.md`.
-
-**Goal:** Make the loop workable on a 200-line transcript rather than a
-one-paragraph post.
-
-- `list-segments` prints position, locator, and character count — never text.
-- ADR-0003's no-echo rule is narrowed — decided, not open. `--show` on
-  `list-segments` and `draft-event` prints only the one selected segment, only
-  to an interactive terminal, and refuses when stdout is not a TTY. Source
-  text may never reach a file, an error message, a log line, redirected or
-  piped output, or a proposer. Codified in a new ADR-0008; ADR-0003 is not
-  edited in place.
-- Three friction fixes from the first walkthrough: `--review-id` lookup,
-  early validation of an unknown `--thread`, repeatable flags documented.
-
-**Acceptance:** the documented verification commands pass, exercised against
-synthetic transcript fixtures only. The first real transcript run — at least
-three cards, one thread, two updates, `drafted_by` recording that a human
-wrote the free text — is the PO's own walkthrough, run separately after this
-ships. It is the first real test of the ten-minute criterion, not a gate on
-this item's completion.
-
-## Next: thread exposure v0
-
-**Status:** specified, next implementation item after transcript navigation
-v0. Contract in `docs/specs/thread-exposure-v0.md`.
-
-**Goal:** Give a thread the three baskets it implies — `if_true`, `if_false`,
-`either_way` — and an export that another tool can consume. No weights, no
-ordering, no scores. SignalWeave never fetches a price and never ranks a thread;
-the export is the boundary.
-
-**The seam is decided, not open:** SignalWeave is the only place a story is
-authored and reviewed; MarketPulse consumes the export and does relative
-strength, and stops authoring narratives. Two schemas for one object was the
-failure mode this decision avoids. Retiring MarketPulse's narrative layer and
-migrating its existing branches is separate follow-up work on MarketPulse's
-side, not part of this item.
-
-**Acceptance:** synthetic threads and instruments only, plus a throwaway
-script proving the export is readable outside SignalWeave. No real thread's
-baskets need to be filled and no MarketPulse code changes here.
-
-## Then: usage gate — no code
-
-Not an implementation item. After the two items above, run the loop on real
-material for two weeks with no new features. The gate passes when the reviewer
-can point at a thread and say either "this told me something I did not already
-know" or "this is where it is wrong".
-
-Reopen conditions for further development: a specific sentence about what was
-missing. "It would be nice if" does not reopen it. If the tool is not opened
-during those two weeks, that is the finding, and the next item is to ask why
-rather than to build.
-
-## Then: candidate proposer v0
-
-**Gated on:** at least twenty human-written candidate summaries in the private
-inbox.
-
-The proposer is the point of the product and the fastest way to ruin it. With
-nothing to imitate and nothing to evaluate against, its output cannot be judged,
-and a review gate that rubber-stamps is worse than no gate. The twenty cards are
-both the style reference and the evaluation set: a proposer is accepted only if
-the reviewer keeps its cards at a rate they would defend out loud.
-
-## Deferred: reviewed event promotion v0
-
-Moved back from "Now". Promotion exists to make records safe to publish, and
-nothing is being published: there is one local reviewer and no remote audience.
-Building de-identification before there is a reason to publish means designing
-rules against imagined requirements and maintaining them for nobody. Reopen when
-a second person needs to read a record, or when a record must leave the machine.
-
-## Deferred: research persona v0.1
-
-Build only after a sufficient set of human-reviewed annotations exists. Persona
-outputs are research prompts and evidence standards, never impersonated views
-or trading recommendations.
+- Method comparison harness (promptfoo), two-model diff, method scorecard.
+- Turning the review gate from pass-through into a real gate — and then only on
+  the steps that prove unreliable.
+- `close-thread` outcome ceremony. Basket churn is the revisit action and it is
+  continuous; a date-triggered close is not needed on top of it.
+- Reviewed event promotion and de-identification. Trigger: a second person needs
+  to read a record, or a record must leave the machine.
+- Research persona. Prices inside SignalWeave. Ranking, weighting, automatic
+  truth classification.
 
 ## Session handoff checklist
 

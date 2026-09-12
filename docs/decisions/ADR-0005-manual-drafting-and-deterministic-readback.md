@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted
+Accepted, superseded in part by [ADR-0008](ADR-0008-machine-authored-records-and-pass-through-gate.md).
+The deterministic, read-only readback decision stands. The premise that a
+human fills `kind`, `summary`, and `uncertainty` is no longer the primary
+path: records are machine-authored and `draft-event` is a fallback.
 
 ## Context
 

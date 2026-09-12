@@ -1,3 +1,10 @@
+> **Folded into milestone 2 on 2026-09-12; not implemented as a standalone item.**
+> The seam decision below stands and is unchanged. The basket shape does not: a
+> basket now starts deliberately wide rather than being filled precisely, and
+> membership changes over time with dated reasons. `export-baskets` survives as
+> specified. Acceptance criterion 2 (the reviewer fills every basket) is void —
+> baskets are machine-drafted under ADR-0008.
+
 # Spec: thread exposure v0
 
 **Milestone:** 2 — real material in, baskets out

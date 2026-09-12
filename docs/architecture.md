@@ -3,61 +3,82 @@
 ## Design principle
 
 SignalWeave separates source material, neutral observations, and causal
-interpretation so that each research claim can be revisited without exposing
-the original source.
+interpretation so that each record can be revisited, and re-derived, without
+exposing the original source.
 
 ```text
-data/raw/ → extraction → data/inbox/ → human review → data/private/threads/
-                                                   (private, append-only hypothesis threads)
+data/raw/ → pipeline (model steps) → data/inbox/ → data/private/
+                                                 → export (story + basket)
 ```
 
-A thread is private until a promotion step exists to de-identify it. A later
-promotion item introduces a tracked `data/reviewed/events/` for de-identified
-candidates, and an equivalent later item would be needed before any
-`data/reviewed/threads/` could exist.
+Records are machine-authored and the review gate is pass-through
+([ADR-0008](decisions/ADR-0008-machine-authored-records-and-pass-through-gate.md)):
+nothing waits for a human, and everything is stamped `review_status: unreviewed`
+with its `drafted_by` and run id. A story stays private until a promotion step
+exists to de-identify it; nothing is published today.
 
 ## Storage zones
 
 | Zone | Git status | Purpose |
 | --- | --- | --- |
 | `data/raw/` | ignored | Original transcripts and observed posts. |
-| `data/inbox/` | ignored | Candidate event cards that still need review. |
-| `data/private/` | ignored | Identity maps, private annotations, worklogs, and private research threads with their updates. |
-| `data/reviewed/events/` | tracked when safe | Not yet implemented; de-identified, accepted observations, introduced by reviewed-event promotion v0. |
+| `data/inbox/` | ignored | Machine-proposed candidate event cards. |
+| `data/private/` | ignored | Identity maps, private annotations, worklogs, run records, and private stories with their updates and baskets. Run records get their own fixed subfolder in milestone 2; add it to `public_check`'s allowed private-zone subfolders at the same time, or tracked docs cannot name it. |
+| `data/reviewed/events/` | tracked when safe | Not yet implemented; de-identified records, introduced only when something needs to be published. |
+
+Prompts and method files are **tracked**, and must contain no source text.
 
 ## Records
 
+### Run
+
+One file per pipeline run: model id, provider and locality
+([ADR-0009](decisions/ADR-0009-model-provider-boundary.md)), method version,
+input document id, and the verbatim model output. Immutable — re-running
+produces a new run, never an overwrite. This is what makes a later model able to
+redo the same input and be compared against what was produced before, so it
+cannot be added retroactively.
+
 ### Candidate event
 
-A proposed, neutral observation extracted from one source. It must include a
-stable locator, a dated summary, and uncertainty. It may suggest thread links;
-it cannot create or merge them.
+A proposed, neutral observation drawn from one source. It must include a stable
+locator, the character span it cites, a dated summary, and uncertainty. The
+cited span must verifiably exist in the source; that is the pipeline's only
+content check.
 
-### Reviewed event
+### Story
 
-A candidate event accepted and, where needed, de-identified by a reviewer.
-It preserves the original candidate's locator and review decision.
+A hypothesis about a mechanism, carrying groups, market sentiment, dated
+updates, supporting and counter evidence, and open questions. It never stores a
+price-derived verdict.
 
-### Thread
+### Basket
 
-A human-owned hypothesis about a mechanism. It contains dated updates,
-supporting evidence, counter-evidence, open questions, invalidation conditions,
-and a review date. It never stores a price-derived verdict.
+The instruments a story implicates, in any market. It starts deliberately wide
+and changes over time; membership changes are dated, carry a reason, and are
+append-only. No weights, no ordering, no score.
 
-## Modules planned
+## Modules
 
 | Module | Responsibility | Status |
 | --- | --- | --- |
 | `public_check` | Prevent accidental publication of private material. | shipped |
 | `schema` | Validate candidate event records. | shipped |
 | `extract` | Segment private transcripts and enforce candidate boundaries. | shipped boundary |
-| `review` | Append private keep, discard, or suggested-link decisions. | shipped |
-| `threads` | Append reviewed evidence to human-owned hypotheses. | shipped |
+| `review` | Append private keep, discard, or suggested-link decisions. | shipped, gate now pass-through |
+| `threads` | Append evidence to stories. | shipped |
+| `runs` | Record and re-read pipeline runs. | milestone 2 |
+| `propose` | Model-backed candidate proposer behind the existing protocol. | milestone 2 |
+| `export` | Emit story and basket for layer 1. | milestone 2 |
 | `persona` | Derive evidence-backed research prompts from public corpus. | deferred |
 
-## AI boundary
+## Boundaries
 
-An AI integration must return structured candidate data, include source
-locators, preserve uncertainty, and remain reviewable. It must not silently
-write reviewed records or represent a research persona as a person's current
-view.
+- SignalWeave never fetches a price, never ranks a story, never scores a basket.
+  The export is the seam; MarketPulse consumes it, tracks relative strength, and
+  renders the page.
+- No command may print a number claiming a record is good. Cross-model agreement
+  may route attention to disagreements; it may never be reported as a score.
+- The pipeline is deterministic orchestration with model steps inside it, not an
+  agent loop. Every step's input and output are storable, which is what makes a
+  run re-runnable and comparable.

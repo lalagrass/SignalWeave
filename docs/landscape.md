@@ -1,5 +1,11 @@
 # Adjacent open-source landscape (surveyed 2026-09-11)
 
+> **Note, 2026-09-12.** This survey describes the loop as originally conceived,
+> with a human review gate in the middle. That gate is now pass-through
+> (ADR-0008). The conclusion is unaffected — no project implements source →
+> story → dated basket → revisit end to end — and the things worth borrowing are
+> unchanged.
+
 Purpose: check whether SignalWeave's core loop — private source → candidate
 event → human review → append-only thread → revisit — already exists as
 open-source software, and record what is worth borrowing rather than building.

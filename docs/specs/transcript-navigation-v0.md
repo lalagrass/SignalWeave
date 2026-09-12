@@ -1,3 +1,10 @@
+> **Retired 2026-09-12.** This spec's premise — a human picks a segment by hand
+> and fact-checks cards mid-process — no longer holds. Records are machine-authored
+> and the review gate is pass-through (ADR-0008); nobody chooses a segment number
+> and nobody reviews a card before it lands. Kept for history. The three friction
+> fixes in DO-3 are still worth having and move into the milestone 2 spec; DO-1 and
+> DO-2 are dropped.
+
 # Spec: transcript navigation v0
 
 **Milestone:** 2 — real material in, baskets out

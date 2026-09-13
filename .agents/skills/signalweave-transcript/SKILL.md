@@ -1,18 +1,23 @@
 ---
 name: signalweave-transcript
-description: Process, ingest, or analyze a private SignalWeave transcript through an interactive-agent bundle or an explicitly authorized direct provider API run.
+description: Process, ingest, or analyze a private SignalWeave transcript through a locally validated interactive-agent bundle. Use for private transcript intake, provenance recording, bundle validation, and optional identifier mapping; real-material direct-provider runs remain paused.
 ---
 
 # SignalWeave transcript processing
 
+This workflow requires a SignalWeave checkout and access to authorized local
+private files. Interactive-agent intake makes no project provider API call.
+
 Use this skill when the user asks to process, ingest, or analyze a SignalWeave
-transcript. Read `docs/transcript-processing.md` before acting.
+transcript. Resolve the SignalWeave repository root first; every project path
+below is relative to that root. Read `docs/transcript-processing.md` before
+acting.
 
 Never reproduce transcript passages, cited spans, or source-specific findings
 in terminal output, tracked files, reviews, progress updates, or handoffs. Keep
 bundles and all generated records in ignored private zones.
 
-## Choose the ingestion path
+## Use the active ingestion path
 
 Use `interactive-agent` mode when the current agent can inspect the selected
 private transcript and produce a private `agent-bundle-v1`. Record the agent's
@@ -38,6 +43,7 @@ provider-call and retry limits plus a redacted attempt ledger. Do not select it
 even when a credential and source-disclosure/cost authorization exist; use the
 interactive-agent path until a dedicated hardening sprint re-enables it.
 
-For either mode, report only safe counts, validation outcomes, provenance
-metadata, and ignored output locations. Before any commit or handoff, run the
-repository publication check and ensure no private output is staged.
+For the active interactive-agent mode, report only safe counts, validation
+outcomes, provenance metadata, and ignored output locations. Before any commit
+or handoff, run the repository publication check and ensure no private output is
+staged.

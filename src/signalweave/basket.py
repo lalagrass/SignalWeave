@@ -12,11 +12,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+import re
 from typing import Any
 
 import yaml
 
 from signalweave.schema import IDENTIFIER
+
+
+# An instrument identifier is market-facing, not one of SignalWeave's own ids:
+# a basket has to name something a price-tracking consumer can resolve against
+# real market data (`2330`, `AAPL`, `BRK.B`), which `schema.IDENTIFIER` — the
+# lowercase rule for this project's internal ids — cannot express. Hence a
+# separate pattern here, and IDENTIFIER left untouched for thread_id,
+# drafted_by, and run_id (methods/basket_v2.md).
+INSTRUMENT = re.compile(r"^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$")
 
 
 REQUIRED_FIELDS = frozenset(
@@ -144,10 +154,18 @@ def _identifier(value: Any, field: str) -> str:
     return value
 
 
+def _instrument(value: Any) -> str:
+    if not isinstance(value, str) or not INSTRUMENT.fullmatch(value):
+        raise BasketValidationError(
+            "instruments must be alphanumeric, optionally separated by '.', '_', or '-'"
+        )
+    return value
+
+
 def _instrument_list(value: Any) -> tuple[str, ...]:
     if not isinstance(value, list):
         raise BasketValidationError("instruments must be a list")
-    return tuple(_identifier(item, "instruments") for item in value)
+    return tuple(_instrument(item) for item in value)
 
 
 def _non_empty_string(value: Any, field: str) -> str:

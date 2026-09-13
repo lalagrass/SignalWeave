@@ -105,3 +105,34 @@ def test_basket_round_trips_and_has_no_weights_or_ordering_fields(tmp_path: Path
         "run_id",
         "created_at",
     }
+
+
+def test_basket_accepts_exchange_codes_alongside_plain_names() -> None:
+    instruments = ["2330", "AAPL", "BRK.B", "tsmc", "hon_hai", "00631L"]
+
+    record = basket(instruments=instruments)
+
+    assert record.instruments == tuple(instruments)
+
+
+@pytest.mark.parametrize("instrument", [".2330", "2330.", "2330__L", ""])
+def test_basket_rejects_a_malformed_instrument(instrument: str) -> None:
+    with pytest.raises(BasketValidationError, match="alphanumeric"):
+        basket(instruments=[instrument])
+
+
+@pytest.mark.parametrize("field", ["thread_id", "drafted_by", "run_id"])
+@pytest.mark.parametrize("value", ["2330", "AAPL"])
+def test_baskets_own_identifiers_stay_lowercase(field: str, value: str) -> None:
+    record = {
+        "thread_id": "story_doc_2026_001",
+        "instruments": ["2330"],
+        "review_status": "unreviewed",
+        "drafted_by": "model_synthetic",
+        "run_id": "run_synthetic002",
+        "created_at": "2026-09-11T00:00:00+00:00",
+    }
+    record[field] = value
+
+    with pytest.raises(BasketValidationError, match="lowercase"):
+        Basket.from_mapping(record)

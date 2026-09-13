@@ -136,11 +136,19 @@ outside Git. Verification: SignalWeave `124 passed` and `public-check` passed;
 the `signalweave-transcript` skill validated; MarketPulse's v1 importer tests
 passed (`12 passed`).
 
-**Next scoped slice:** render the accepted private v1 export in MarketPulse and
-record a human legibility judgement of the resulting page and basket RS. A real
-M2 walkthrough may use the interactive-agent path above; direct API is optional
-and still requires separate source-disclosure and cost authorization. This does
-not authorize source publication, history rewriting, or M3 feedback work.
+**M2 private page walkthrough, completed 2026-09-13.** MarketPulse rendered the
+accepted v1 export and a reader completed the private legibility walkthrough.
+`n/a` is an honest data-availability result, not weakening or a verdict on the
+story. MarketPulse distinguishes a genuinely empty declared basket, a basket
+with no resolved identifiers, and a resolved basket without usable as-of prices;
+it does not change the RS calculation or guess instrument mappings. The private
+pages and reader judgement remain only in the ignored private worklog.
+
+**Next scoped slice:** define a canonical SignalWeave instrument identifier or
+explicit name-to-code mapping contract, export it with the basket, and let
+MarketPulse consume it without guessing. This is a cross-repository contract
+slice; it does not authorize reanalysis, source publication, direct API use,
+history rewriting, ranking, scoring, or M3 basket-churn work.
 
 ## Milestone 3: the basket changes
 

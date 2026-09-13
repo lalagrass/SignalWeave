@@ -107,7 +107,30 @@ The record is written under ignored `data/inbox/reviews/`. Valid actions are
 `keep_unlinked`, `discard`, and `link_to_thread`; only the last action accepts
 `--thread`.
 
-## Run the pipeline on a transcript
+## Process a transcript through an interactive agent
+
+When the current interactive coding agent has produced a private
+`agent-bundle-v1` JSON file, import it locally without a project API key, SDK,
+or provider request:
+
+```bash
+uv run --no-sync signalweave import-agent-bundle path/to/private.md path/to/agent-bundle-v1.json \
+  --source source_a \
+  --document-id doc_2026_001 \
+  --date 2026-09-11
+```
+
+The bundle declares the actual provider, model, locality, and drafting identity.
+Treat a cloud coding agent as `remote` unless its on-device execution is
+verifiable: no project API key is not local inference. The importer segments the
+private transcript locally, verifies every cited span, then writes one immutable
+private bundle run and the linked unreviewed events, story, and basket. It never
+constructs a provider client or makes a network request.
+
+See [transcript processing](docs/transcript-processing.md) for the strict bundle
+contract and operational boundaries.
+
+## Process a transcript through a direct provider API
 
 `run-pipeline` segments a transcript and runs it end to end: propose per
 segment, span-exists check, story draft, basket draft. Every record it writes
@@ -129,19 +152,20 @@ for the basket, and writes one immutable run record per call under ignored
 `data/private/runs/` (ADR-0009). `--privacy-tier local` refuses to run at all —
 loudly, before any call — rather than silently sending a local-only source to
 a remote provider. Running this against real material spends money and sends
-that material to a third party: decide that deliberately, per source, rather
-than by habit.
+that material to a third party. It requires separate explicit source-disclosure
+and cost authorization; do not select it merely because an API key exists.
 
 ## Export baskets for MarketPulse
 
 ```bash
-uv run --no-sync signalweave export-baskets --as-of 2026-09-20 --out /tmp/baskets.yaml
+# Set PRIVATE_EXPORT_PATH to a private file beneath data/private/exports/.
+uv run --no-sync signalweave export-baskets --as-of 2026-09-20 --out "$PRIVATE_EXPORT_PATH"
 ```
 
-Emits one entry per story — id, review date, an overdue flag computed from
-`--as-of`, and its flat instrument basket. Nothing source-derived: no summary,
-no mechanism text. This is the seam with MarketPulse
-(`docs/specs/thread-exposure-v0.md`); SignalWeave never fetches a price or
+Emits schema v1: one entry per story with context, review date, an overdue flag,
+a flat instrument basket, and separate story/basket provenance. The destination
+must be a private SignalWeave export location or MarketPulse's private landing
+zone. This is the seam with MarketPulse; SignalWeave never fetches a price or
 ranks a basket.
 
 ## Local setup

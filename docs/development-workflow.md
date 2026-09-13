@@ -43,3 +43,8 @@ Use `dev` as the integration branch and start every sprint on a short-lived
 `codex/<scope>` branch before editing. A cross-repository sprint uses one focused
 branch and separate local commits in each repository. Keep `main` at
 milestone-quality states.
+
+For transcript operations, use the repository skill at
+`.agents/skills/signalweave-transcript/SKILL.md`. It routes between a
+no-network interactive-agent bundle import and an explicitly authorized direct
+provider API run; it is not the sprint-planning workflow above.

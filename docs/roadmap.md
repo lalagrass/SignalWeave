@@ -123,9 +123,23 @@ SignalWeave's private export root or MarketPulse's ignored private landing zone.
 Verification: SignalWeave `112 passed` and `public-check` passed; MarketPulse
 `386 passed` (split only to keep terminal runs bounded).
 
-**Next scoped slice:** an explicitly authorized real M2 walkthrough — one named
-private transcript, its ADR-0009 provider/cost approval, unattended pipeline
-run, local v1 export, rendered page, and a human legibility judgment. It does
+**Interactive-agent intake seam, completed 2026-09-13.** A strict,
+no-network `agent-bundle-v1` importer now locally validates an
+interactive-agent transcript bundle before writing the same private event,
+story, basket, and immutable run records used by the direct API pipeline. It
+records actual provider/model/locality provenance; a cloud agent remains remote
+even when no project API key is used. Existing private walkthrough records were
+validated against their stored agent bundles: 52 candidate spans, two stories,
+and two baskets. Their regenerated v1 export contains two stories and is
+accepted by MarketPulse. The legacy private outputs remain preserved locally,
+outside Git. Verification: SignalWeave `124 passed` and `public-check` passed;
+the `signalweave-transcript` skill validated; MarketPulse's v1 importer tests
+passed (`12 passed`).
+
+**Next scoped slice:** render the accepted private v1 export in MarketPulse and
+record a human legibility judgement of the resulting page and basket RS. A real
+M2 walkthrough may use the interactive-agent path above; direct API is optional
+and still requires separate source-disclosure and cost authorization. This does
 not authorize source publication, history rewriting, or M3 feedback work.
 
 ## Milestone 3: the basket changes

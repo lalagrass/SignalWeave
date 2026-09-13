@@ -26,6 +26,12 @@ never scores a basket.
 - Raw source text may be sent to a model provider under the rules in
   [ADR-0009](docs/decisions/ADR-0009-model-provider-boundary.md). Every run
   records which provider and locality it used.
+- Transcript processing has two provenance-distinct paths: an interactive agent
+  supplies a private bundle that is locally validated and imported, or an
+  explicitly authorized direct provider API run calls `run-pipeline`. No project
+  API key does not imply local inference; record an interactive cloud agent as
+  `remote` unless an on-device model is verifiable. See
+  [ADR-0011](docs/decisions/ADR-0011-interactive-agent-transcript-processing.md).
 - Before a handoff or release, run
   `uv sync --no-editable --reinstall-package signalweave`, then
   `uv run --no-sync pytest` and `uv run --no-sync signalweave public-check`.

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "provider": "openai",
+    "model_id": "gpt-synthetic-1",
+    "model_locality": "remote",
+    "drafted_by": "agent_synthetic",
+    "method_version": "agent_bundle_v1",
+    "created_at": "2026-09-13T00:00:00+00:00"
+  },
+  "events": [
+    {
+      "segment": 1,
+      "proposals": [
+        {
+          "event_id": "evt_synthetic_001",
+          "kind": "observation",
+          "summary": "A synthetic observation.",
+          "uncertainty": "medium",
+          "cited_span": "Synthetic cited words.",
+          "claims": ["Synthetic claim."],
+          "mechanisms": ["Synthetic mechanism."],
+          "counterarguments": [],
+          "candidate_threads": ["story_synthetic_001"]
+        }
+      ]
+    }
+  ],
+  "story": {
+    "thread_id": "story_synthetic_001",
+    "mechanism": "Synthetic mechanism.",
+    "open_question": "Synthetic question?",
+    "invalidation_conditions": ["Synthetic invalidation."],
+    "groups": ["synthetic group"],
+    "market_sentiment": "Synthetic sentiment.",
+    "review_date": "2026-09-27"
+  },
+  "basket": {
+    "instruments": ["2330", "2454"]
+  }
+}

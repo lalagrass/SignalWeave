@@ -4,6 +4,7 @@ import argparse
 from datetime import date, datetime
 from pathlib import Path
 
+from signalweave.agent_bundle import AgentBundleError, import_agent_bundle
 from signalweave.basket import BasketValidationError, load_basket
 from signalweave.export import export_baskets, write_export
 from signalweave.extract import (
@@ -162,6 +163,15 @@ def main(argv: list[str] | None = None) -> int:
         choices=("local", "remote"),
         help="This source's declared privacy tier (ADR-0009). 'local' refuses a remote model call.",
     )
+    import_agent_bundle_command = commands.add_parser(
+        "import-agent-bundle",
+        help="Validate a private interactive-agent bundle locally and write private records.",
+    )
+    import_agent_bundle_command.add_argument("transcript", type=Path)
+    import_agent_bundle_command.add_argument("bundle", type=Path)
+    import_agent_bundle_command.add_argument("--source", required=True)
+    import_agent_bundle_command.add_argument("--document-id", required=True)
+    import_agent_bundle_command.add_argument("--date", required=True, dest="event_date")
     export_baskets_command = commands.add_parser(
         "export-baskets", help="Emit one basket per story for MarketPulse to read."
     )
@@ -435,6 +445,25 @@ def main(argv: list[str] | None = None) -> int:
             f"{len(result.event_paths)} event(s) from "
             f"{result.segments_total - result.segments_skipped}/{result.segments_total} "
             "segment(s)."
+        )
+    elif args.command == "import-agent-bundle":
+        try:
+            result = import_agent_bundle(
+                args.transcript,
+                args.bundle,
+                source=args.source,
+                document_id=args.document_id,
+                event_date=args.event_date,
+                workspace_root=Path.cwd(),
+            )
+        except (AgentBundleError, OSError, UnicodeDecodeError, ValueError):
+            # Bundle and transcript values can contain source-derived text.  Do
+            # not surface parser/provider-like detail through this command.
+            print("Agent bundle import failed; no records were written.")
+            return 1
+        print(
+            f"Agent bundle imported: {len(result.event_paths)} event(s), "
+            "one story, and one basket."
         )
     elif args.command == "export-baskets":
         try:

@@ -7,9 +7,15 @@ interpretation so that each record can be revisited, and re-derived, without
 exposing the original source.
 
 ```text
-data/raw/ → pipeline (model steps) → data/inbox/ → data/private/
-                                                 → export (story + basket)
+                         → interactive-agent bundle → local validation ┐
+data/raw/ → direct API pipeline ────────────────────────────────────────┼→ data/inbox/ + data/private/ → export
+                                                                         ┘
 ```
+
+Both paths converge on the same validated private event, story, basket, and
+run records. An interactive cloud agent is still a remote provider even though
+the repository does not hold or use a project API key; its bundle records the
+actual provider, model, and locality before local import.
 
 Records are machine-authored and the review gate is pass-through
 ([ADR-0008](decisions/ADR-0008-machine-authored-records-and-pass-through-gate.md)):
@@ -73,6 +79,7 @@ append-only. No weights, no ordering, no score.
 | `basket` | Validate and store one story's instrument list. | shipped |
 | `propose` | Model-backed candidate, story, and basket proposers behind the existing protocol. | shipped |
 | `pipeline` | Deterministic orchestration: segment, propose, span check, story, basket. | shipped |
+| `agent_bundle` | Validate and import a no-network interactive-agent bundle into the same private records. | shipped |
 | `export` | Emit story and basket for layer 1. | shipped |
 | `persona` | Derive evidence-backed research prompts from public corpus. | deferred |
 
@@ -81,6 +88,9 @@ append-only. No weights, no ordering, no score.
 - SignalWeave never fetches a price, never ranks a story, never scores a basket.
   The export is the seam; MarketPulse consumes it, tracks relative strength, and
   renders the page.
+- `run-pipeline` is the direct-provider route and requires separate source
+  disclosure and cost authorization. `import-agent-bundle` makes no provider
+  request; it validates a previously produced interactive-agent bundle locally.
 - No command may print a number claiming a record is good. Cross-model agreement
   may route attention to disagreements; it may never be reported as a score.
 - The pipeline is deterministic orchestration with model steps inside it, not an

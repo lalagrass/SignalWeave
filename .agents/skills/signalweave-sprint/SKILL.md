@@ -16,9 +16,14 @@ user's request takes precedence over this workflow. Follow the repository's
    unrelated changes.
 2. If the current directory is not a Git checkout of SignalWeave, stop before
    editing and identify the mismatch. Never copy `.git` metadata between folders.
-3. If the current request includes commit or push and the checkout is on an
-   integration branch, create a focused `codex/<scope>` branch before editing.
-4. Local source inspection is allowed when it is relevant to the requested
+3. Unless the user explicitly chooses another branch strategy, create or switch
+   to a focused `codex/<scope>` branch before editing any sprint files. Branch
+   creation does not require separate commit or push authorization.
+4. If sprint work has already started on an integration branch, preserve the
+   working tree and create the focused branch immediately, before further edits
+   or commits. When a sprint spans repositories, use a focused branch in each
+   repository and record the branch mapping in the handoff.
+5. Local source inspection is allowed when it is relevant to the requested
    outcome. Use targeted reads, hashes, or comparisons as appropriate, and keep
    source content and source-specific findings in ignored private zones.
 
@@ -61,9 +66,14 @@ user's request takes precedence over this workflow. Follow the repository's
 
 1. Update `docs/roadmap.md` with the observable result, exact verification, and
    the next scoped item. Keep sensitive run details in the private worklog.
-2. Summarize the completed outcome, verification, review findings, remaining
+2. After required checks and reviews pass, stage only sprint-owned files, inspect
+   the staged diff, and create scoped local commits. A verified sprint ends with
+   local commit hashes unless the user explicitly asks to leave it uncommitted.
+3. When work spans repositories, commit each repository separately. Never include
+   unrelated pre-existing changes; report each repository's branch, commit hash,
+   and remaining dirty state.
+4. Summarize the completed outcome, verification, review findings, remaining
    risks, and the recommended next slice.
-3. Do not commit, push, open a pull request, or merge unless the user explicitly
-   requests that Git action. When requested, use the focused feature branch
-   created at the start unless the user names another branch, and stop before
-   merge unless merge is also explicitly requested.
+5. Do not push, open a pull request, or merge unless the user explicitly requests
+   that external Git action. Stop before merge unless merge was separately and
+   explicitly requested.

@@ -34,9 +34,12 @@ then ask:
 
 The repository skill at
 `.agents/skills/signalweave-sprint/SKILL.md` scopes the work, invokes the relevant
-review roles, verifies the result, and updates the handoff. Add “commit and push”
-only when that external Git action is desired. A human still decides whether to
-merge.
+review roles, verifies the result, creates scoped local commits, and updates the
+handoff. Local commits are the default durable checkpoint after successful
+verification and review. Ask explicitly only for external Git actions: push,
+opening a pull request, or merge. A human still decides whether to merge.
 
-Use `dev` as the integration branch and short-lived `codex/<scope>` branches for
-sprint changes. Keep `main` at milestone-quality states.
+Use `dev` as the integration branch and start every sprint on a short-lived
+`codex/<scope>` branch before editing. A cross-repository sprint uses one focused
+branch and separate local commits in each repository. Keep `main` at
+milestone-quality states.

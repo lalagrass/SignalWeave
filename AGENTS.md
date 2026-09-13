@@ -59,6 +59,12 @@ directories.
 4. Keep changes scoped; record durable design choices as an ADR.
 5. Update the roadmap with verification results and the next handoff item.
 
+Every sprint starts on a focused `codex/<scope>` branch before implementation,
+unless the user explicitly chooses another branch strategy. After the required
+verification and reviews pass, create scoped local commits as the durable sprint
+checkpoint. Local commits do not require separate authorization. Pushing,
+opening a pull request, and merging always require an explicit user request.
+
 A milestone's acceptance is something a reader can look at, not a list of
 commands that exit zero. Tests still have to pass; they are not the deliverable.
 

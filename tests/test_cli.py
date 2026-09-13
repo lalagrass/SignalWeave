@@ -641,6 +641,58 @@ def test_run_pipeline_refuses_a_local_only_source(tmp_path: Path, monkeypatch, c
     assert "paused" in capsys.readouterr().out
 
 
+def test_export_failure_does_not_echo_private_exception_details(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    sentinel = "source_specific_private_sentinel"
+    monkeypatch.chdir(tmp_path)
+
+    def fail(*args, **kwargs):
+        raise ValueError(f"{sentinel}: /private/source/path")
+
+    monkeypatch.setattr(cli_module, "export_baskets", fail)
+    assert (
+        main(
+            [
+                "export-baskets",
+                "--as-of",
+                "2026-09-20",
+                "--out",
+                str(tmp_path / "data" / "private" / "exports" / "baskets.yaml"),
+            ]
+        )
+        == 1
+    )
+    output = capsys.readouterr().out
+    assert output == "Export failed; inspect private records locally.\n"
+    assert sentinel not in output
+
+
+def test_export_success_does_not_echo_private_destination(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    private_destination = tmp_path / "data" / "private" / "exports" / "private-name.yaml"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli_module, "export_baskets", lambda *args, **kwargs: [])
+    monkeypatch.setattr(cli_module, "write_export", lambda *args, **kwargs: private_destination)
+
+    assert (
+        main(
+            [
+                "export-baskets",
+                "--as-of",
+                "2026-09-20",
+                "--out",
+                str(private_destination),
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert output == "Exported 0 stories.\n"
+    assert str(private_destination) not in output
+
+
 @pytest.mark.skip(reason="The direct provider route is paused; v2 export is covered by test_export.py.")
 def test_export_baskets_writes_one_flat_basket_per_story(
     tmp_path: Path, monkeypatch, capsys

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "mapping_id": "mapping_synthetic001",
+  "supersedes_mapping_id": null,
+  "provenance": {
+    "provider": "openai",
+    "model_id": "gpt-synthetic-1",
+    "model_locality": "remote",
+    "drafted_by": "mapping_agent_synthetic",
+    "method_version": "identifier_mapping_v1",
+    "created_at": "2026-09-13T00:00:00+00:00"
+  },
+  "members": [
+    {
+      "declared_identifier": "synthetic_one",
+      "mapping_status": "resolved",
+      "venue": "TWSE",
+      "symbol": "1234",
+      "reason": null
+    },
+    {
+      "declared_identifier": "synthetic_two",
+      "mapping_status": "unresolved",
+      "venue": null,
+      "symbol": null,
+      "reason": "No canonical listing supplied."
+    }
+  ]
+}

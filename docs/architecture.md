@@ -85,7 +85,7 @@ derives venue support and as-of price availability ([ADR-0012](decisions/ADR-001
 | `threads` | Append evidence to stories. | shipped |
 | `runs` | Record and re-read pipeline runs. | shipped |
 | `basket` | Validate and store one story's instrument list. | shipped |
-| `identifier_mapping` | Validate immutable canonical identity mappings for export v2. | shipped |
+| `identifier_mapping` | Atomically import and validate immutable canonical identity mappings for export v2. | shipped |
 | `propose` | Model-backed candidate, story, and basket proposers behind the existing protocol. | shipped |
 | `pipeline` | Deterministic orchestration: segment, propose, span check, story, basket. | shipped |
 | `agent_bundle` | Validate and import a no-network interactive-agent bundle into the same private records. | shipped |

@@ -21,8 +21,8 @@ Every milestone below is accepted on something a reader can look at. Tests still
 have to pass; they are not the deliverable.
 
 **Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
-`uv run --no-sync pytest` (134 passed, 1 skipped), and
-`uv run --no-sync signalweave public-check` passed on 2026-09-12.
+`uv run --no-sync pytest` (154 passed, 1 skipped), and
+`uv run --no-sync signalweave public-check` passed on 2026-09-13.
 
 ## Completed
 
@@ -101,9 +101,11 @@ story is being told and whether the displayed static RS is `outperforming`,
 **Boundary-closure slice, completed 2026-09-13.** MarketPulse's committed HEAD
 no longer tracks the confirmed source-input paths. Future podcast/post captures
 and local SignalWeave exports are ignored there; the committed change is
-`82698b9`. The subsequent remote remediation preserved a local backup, made the
-repository private, rewrote the affected remote history, and verified the
-private remote's reachable refs. Verification: MarketPulse's owner reran `uv run pytest` (`377
+`82698b9`. The subsequent remote remediation preserved a local backup,
+temporarily made the repository private, rewrote the affected remote history,
+and verified its reachable refs. At the 2026-09-13 operational-closure review,
+the repository was public with one remote `dev` branch; a targeted reachable-path
+audit found none of the removed source-input paths. Verification: MarketPulse's owner reran `uv run pytest` (`377
 passed in 62.21s`); SignalWeave ran `uv sync --no-editable
 --reinstall-package signalweave`, `uv run --no-sync pytest` (`108 passed`), and
 `uv run --no-sync signalweave public-check` (passed).
@@ -141,9 +143,9 @@ with no resolved identifiers, and a resolved basket without usable as-of prices;
 it does not change the RS calculation or guess instrument mappings. The private
 pages and reader judgement remain only in the ignored private worklog.
 
-**Identifier/export v2 closure, completed 2026-09-13.** SignalWeave now binds a
-private, append-only `identifier-mapping-v1` sidecar to each exact basket
-snapshot and emits schema v2 without modifying v1 exports, baskets, or runs.
+**Identifier/export v2 contract closure, completed 2026-09-13.** SignalWeave can
+bind a private, append-only `identifier-mapping-v1` sidecar to each exact basket
+snapshot and emit schema v2 without modifying v1 exports, baskets, or runs.
 The mapping carries independent provenance and supports only `resolved`,
 `unresolved`, and `not_publicly_listed` identity states. MarketPulse consumes
 only explicit resolved `TWSE`/`TPEX` symbols and visibly distinguishes its own
@@ -161,6 +163,21 @@ that fixed compatibility directory. The planning workflow records only
 de-identified, behavior-level observations in tracked specs, keeping any
 private or assistant-derived feedback under ignored `data/private/`.
 Verification: MarketPulse `391 passed` (three bounded runs) and
+`scripts/check-agent-workflow.sh` passed.
+
+**Export v2 operational closure, completed 2026-09-13.** A supported
+`import-identifier-mapping` command now accepts only a strict ignored-private
+bundle, binds it to an existing basket and basket run, fixes the method to
+`identifier_mapping_v1`, and writes the independent run and sidecar through a
+validated, rollback-checked operation. Cleanup failure is reported explicitly
+rather than hidden behind a false no-records claim. The two existing private
+basket snapshots now each have one active sidecar; their pre-existing story,
+basket, and run hashes stayed unchanged. A real private schema-v2 export was
+accepted by MarketPulse and rendered as two private pages: one had RS20
+available and one retained an honest `n/a`. The deterministic local pass
+resolved 13 exact single-venue symbols and left 64 identities unresolved rather
+than guessing aliases. Verification: SignalWeave `154 passed, 1 skipped` and
+`public-check` passed; MarketPulse `391 passed` and
 `scripts/check-agent-workflow.sh` passed.
 
 **Next scoped slice:** formally begin M3 basket-churn work. This does not

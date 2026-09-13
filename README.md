@@ -139,6 +139,17 @@ Use the interactive-agent bundle path above in the interim.
 
 ## Export baskets for MarketPulse
 
+Create and import a private identity mapping bundle before the first v2 export.
+The bundle contract is documented in
+[`docs/contracts/identifier-mapping-bundle-v1.md`](docs/contracts/identifier-mapping-bundle-v1.md):
+
+```bash
+# Set PRIVATE_MAPPING_BUNDLE to the ignored JSON bundle path.
+uv run --no-sync signalweave import-identifier-mapping \
+  "$PRIVATE_MAPPING_BUNDLE" \
+  --thread story_synthetic_001
+```
+
 ```bash
 # Set PRIVATE_EXPORT_PATH to a private file beneath data/private/exports/.
 uv run --no-sync signalweave export-baskets --as-of 2026-09-20 --out "$PRIVATE_EXPORT_PATH"

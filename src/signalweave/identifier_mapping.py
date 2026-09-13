@@ -22,6 +22,7 @@ from signalweave.schema import IDENTIFIER
 
 
 SCHEMA_VERSION = 1
+METHOD_VERSION = "identifier_mapping_v1"
 STATUSES = frozenset({"resolved", "unresolved", "not_publicly_listed"})
 VENUE = re.compile(r"^[A-Z][A-Z0-9._-]*$")
 SYMBOL = re.compile(r"^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$")
@@ -151,6 +152,16 @@ class IdentifierMapping:
 def write_identifier_mapping(mapping: IdentifierMapping, directory: Path) -> Path:
     """Write one mapping revision, refusing overwrite or ambiguous active state."""
     directory.mkdir(parents=True, exist_ok=True)
+    validate_identifier_mapping_write(mapping, directory)
+    path = directory / f"{mapping.mapping_id}.yaml"
+    path.write_text(
+        yaml.safe_dump(mapping.to_mapping(), allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
+    return path
+
+
+def validate_identifier_mapping_write(mapping: IdentifierMapping, directory: Path) -> None:
+    """Preflight one append-only revision without writing private state."""
     existing = _load_directory(directory)
     if any(item.mapping_id == mapping.mapping_id for item in existing):
         raise FileExistsError(f"identifier mapping already exists: {mapping.mapping_id}")
@@ -163,11 +174,8 @@ def write_identifier_mapping(mapping: IdentifierMapping, directory: Path) -> Pat
     if same_snapshot:
         if len(active) != 1 or mapping.supersedes_mapping_id != active[0].mapping_id:
             raise IdentifierMappingError("identifier mapping revision must supersede the one active mapping")
-    path = directory / f"{mapping.mapping_id}.yaml"
-    path.write_text(
-        yaml.safe_dump(mapping.to_mapping(), allow_unicode=True, sort_keys=False), encoding="utf-8"
-    )
-    return path
+        if mapping.provenance.created_at < active[0].provenance.created_at:
+            raise IdentifierMappingError("identifier mapping revision must not predate its predecessor")
 
 
 def load_active_identifier_mapping(
@@ -281,6 +289,10 @@ def _provenance(value: Any) -> MappingProvenance:
         raise IdentifierMappingError("identifier mapping review_status must be 'unreviewed'")
     if value["model_locality"] not in {"local", "remote"}:
         raise IdentifierMappingError("identifier mapping model_locality must be local or remote")
+    if value["method_version"] != METHOD_VERSION:
+        raise IdentifierMappingError(
+            "identifier mapping method_version must be identifier_mapping_v1"
+        )
     return MappingProvenance(
         review_status="unreviewed",
         drafted_by=_identifier(value["drafted_by"], "mapping drafted_by"),
@@ -288,7 +300,7 @@ def _provenance(value: Any) -> MappingProvenance:
         provider=_identifier(value["provider"], "mapping provider"),
         model_id=_non_empty_string(value["model_id"], "mapping model_id"),
         model_locality=value["model_locality"],
-        method_version=_non_empty_string(value["method_version"], "mapping method_version"),
+        method_version=METHOD_VERSION,
         created_at=_timestamp(value["created_at"], "mapping created_at"),
     )
 

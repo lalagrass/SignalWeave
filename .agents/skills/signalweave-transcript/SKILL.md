@@ -26,8 +26,12 @@ the three methods it composes: `methods/propose_v1.md`,
 `methods/story_v1.md`, and `methods/basket_v2.md`. The bundle remains v1 and
 contains only its existing `basket.instruments` form. If canonical venue/symbol
 identity is needed for export v2, create a separate private
-`identifier-mapping-v1` record under its own method/provenance; do not insert
-mapping fields into an existing `agent-bundle-v1`.
+`identifier-mapping-v1` bundle under its own method/provenance; do not insert
+mapping fields into an existing `agent-bundle-v1`. Read
+`methods/identifier_mapping_v1.md`, write the strict private JSON bundle from
+`docs/contracts/identifier-mapping-bundle-v1.md`, then import it with
+`signalweave import-identifier-mapping`. Never manually create the mapping run
+or sidecar.
 
 The direct-provider `run-pipeline` path is paused for real material pending
 provider-call and retry limits plus a redacted attempt ledger. Do not select it

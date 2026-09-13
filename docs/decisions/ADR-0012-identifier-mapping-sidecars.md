@@ -30,6 +30,11 @@ Each mapping has its own run and complete provenance. Corrections create a new
 mappings are export errors. Export v2 includes the mapped members and mapping
 provenance. It does not change v1 documents.
 
+The supported import path accepts a strict ignored-private mapping bundle and
+derives the basket snapshot fields and mapping run id locally. It validates the
+whole operation before writing the immutable run and sidecar together; operators
+do not construct either stored record by hand.
+
 MarketPulse decides whether a resolved venue is supported and whether a symbol
 has as-of price data. It must consume only explicit supported symbols, never
 infer aliases or treat unresolved identity as a negative market signal.

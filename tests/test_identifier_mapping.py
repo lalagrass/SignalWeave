@@ -188,3 +188,11 @@ def test_mapping_status_invariants(status, venue, symbol, reason, message) -> No
     }
     with pytest.raises(IdentifierMappingError, match=message):
         IdentifierMapping.from_mapping(record)
+
+
+def test_mapping_requires_identifier_mapping_v1_method() -> None:
+    record = _mapping("mapping_synthetic001").to_mapping()
+    record["provenance"]["method_version"] = "basket_v2"
+
+    with pytest.raises(IdentifierMappingError, match="identifier_mapping_v1"):
+        IdentifierMapping.from_mapping(record)

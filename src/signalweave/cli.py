@@ -20,6 +20,11 @@ from signalweave.public_check import (
     require_configuration,
     violations,
 )
+from signalweave.identifier_mapping_import import (
+    IdentifierMappingImportError,
+    IdentifierMappingRollbackError,
+    import_identifier_mapping,
+)
 from signalweave.review import (
     ReviewValidationError,
     create_review,
@@ -161,6 +166,15 @@ def main(argv: list[str] | None = None) -> int:
     import_agent_bundle_command.add_argument("--source", required=True)
     import_agent_bundle_command.add_argument("--document-id", required=True)
     import_agent_bundle_command.add_argument("--date", required=True, dest="event_date")
+    import_identifier_mapping_command = commands.add_parser(
+        "import-identifier-mapping",
+        help=(
+            "Validate a private identifier-mapping-v1 bundle and write its run "
+            "and sidecar with checked rollback."
+        ),
+    )
+    import_identifier_mapping_command.add_argument("bundle", type=Path)
+    import_identifier_mapping_command.add_argument("--thread", required=True, dest="thread_id")
     export_baskets_command = commands.add_parser(
         "export-baskets", help="Emit one basket per story for MarketPulse to read."
     )
@@ -392,6 +406,23 @@ def main(argv: list[str] | None = None) -> int:
             f"Agent bundle imported: {len(result.event_paths)} event(s), "
             "one story, and one basket."
         )
+    elif args.command == "import-identifier-mapping":
+        try:
+            import_identifier_mapping(
+                args.bundle,
+                thread_id=args.thread_id,
+                workspace_root=Path.cwd(),
+            )
+        except IdentifierMappingRollbackError:
+            print(
+                "Identifier mapping import failed and rollback is incomplete; "
+                "inspect the private run and mapping directories."
+            )
+            return 1
+        except (IdentifierMappingImportError, OSError, UnicodeDecodeError, ValueError):
+            print("Identifier mapping import failed; no records were written.")
+            return 1
+        print("Identifier mapping imported: one immutable run and one sidecar.")
     elif args.command == "export-baskets":
         try:
             as_of = date.fromisoformat(args.as_of)
@@ -410,10 +441,10 @@ def main(argv: list[str] | None = None) -> int:
                     Path.cwd().parent / "MarketPulse" / "data" / "private" / "signalweave",
                 ),
             )
-        except (BasketValidationError, ThreadValidationError, OSError, ValueError) as error:
-            print(f"Export failed: {error}")
+        except (BasketValidationError, ThreadValidationError, OSError, ValueError):
+            print("Export failed; inspect private records locally.")
             return 1
-        print(f"Exported {len(entries)} stor{'y' if len(entries) == 1 else 'ies'} to {path}")
+        print(f"Exported {len(entries)} stor{'y' if len(entries) == 1 else 'ies'}.")
     return 0
 
 

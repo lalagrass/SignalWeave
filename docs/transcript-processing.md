@@ -74,6 +74,28 @@ Before producing a bundle, read `methods/agent_bundle_v1.md`, which composes
 part of this v1 payload; it is a separately-provenanced private
 `identifier-mapping-v1` sidecar bound to the resulting basket snapshot.
 
+## Identifier mapping import
+
+When export v2 is needed, read `methods/identifier_mapping_v1.md` and create one
+strict private JSON bundle following
+`docs/contracts/identifier-mapping-bundle-v1.md`. Uncertain identities stay
+`unresolved`; do not guess aliases or inspect prices.
+
+```bash
+# Set PRIVATE_MAPPING_BUNDLE to the ignored JSON bundle path.
+uv run --no-sync signalweave import-identifier-mapping \
+  "$PRIVATE_MAPPING_BUNDLE" \
+  --thread story_synthetic_001
+```
+
+The importer reads the existing basket snapshot, validates that every member is
+present exactly once and in the original order, then writes the independent
+`identifier_mapping_v1` run and sidecar with checked rollback. It refuses a
+missing basket run, a wrong method version, an invalid supersession, or any
+destination collision before writing. If a later filesystem write fails, both
+new paths are removed; a cleanup refusal is reported as an incomplete rollback
+rather than a false no-records claim. `agent-bundle-v1` remains unchanged.
+
 ## Direct provider API
 
 `run-pipeline` is paused and refuses all execution pending provider-call/retry

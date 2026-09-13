@@ -102,6 +102,32 @@ the PO's call to trigger, not something exercised automatically here.
 one real transcript, and a reader can say what story is being told and whether
 the basket is strengthening. "Interesting" and "garbage" are both results.
 
+**Boundary-closure slice, completed 2026-09-13.** MarketPulse's committed HEAD
+no longer tracks the confirmed source-input paths. Future podcast/post captures
+and local SignalWeave exports are ignored there; the committed change is
+`82698b9`. This is only a HEAD and future-ingress fix: public Git history was
+not rewritten. Verification: MarketPulse's owner reran `uv run pytest` (`377
+passed in 62.21s`); SignalWeave ran `uv sync --no-editable
+--reinstall-package signalweave`, `uv run --no-sync pytest` (`108 passed`), and
+`uv run --no-sync signalweave public-check` (passed).
+
+**Export v1 seam, completed 2026-09-13.** SignalWeave now emits
+`schema_version: 1`, `as_of`, and `generated_at`, with separate story and
+basket provenance. Each provenance block retains `review_status: unreviewed`,
+`drafted_by`, `run_id`, and the `method_version` resolved from its immutable
+run record. MarketPulse is v1-only: it rejects absent, malformed, or unsupported
+versions before rendering, validates exact types and fields, and visibly labels
+both provenance blocks as machine-authored and unreviewed. The canonical and
+vendored fixtures are synthetic and byte-identical. Exports are limited to
+SignalWeave's private export root or MarketPulse's ignored private landing zone.
+Verification: SignalWeave `112 passed` and `public-check` passed; MarketPulse
+`386 passed` (split only to keep terminal runs bounded).
+
+**Next scoped slice:** an explicitly authorized real M2 walkthrough — one named
+private transcript, its ADR-0009 provider/cost approval, unattended pipeline
+run, local v1 export, rendered page, and a human legibility judgment. It does
+not authorize source publication, history rewriting, or M3 feedback work.
+
 ## Milestone 3: the basket changes
 
 Dated membership changes with reasons, visible history, and a dispersion flag —

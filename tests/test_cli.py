@@ -689,7 +689,7 @@ def test_export_baskets_writes_one_flat_basket_per_story(
         == 0
     )
     capsys.readouterr()
-    out_path = tmp_path / "export" / "baskets.yaml"
+    out_path = tmp_path / "data" / "private" / "exports" / "baskets.yaml"
 
     assert main(["export-baskets", "--as-of", "2026-09-20", "--out", str(out_path)]) == 0
     assert "Exported 1 story" in capsys.readouterr().out
@@ -703,17 +703,22 @@ def test_export_baskets_writes_one_flat_basket_per_story(
         days=REVIEW_CADENCE_DAYS
     )
     exported = yaml.safe_load(out_path.read_text(encoding="utf-8"))
-    assert exported["stories"] == [
-        {
-            "thread_id": "story_doc_2026_001",
-            "review_date": expected_review_date.isoformat(),
-            "overdue": expected_review_date < date(2026, 9, 20),
-            "basket": ["tsmc", "asml"],
-            "mechanism": "A synthetic mechanism.",
-            "groups": ["synthetic upstream suppliers"],
-            "market_sentiment": "Synthetic cautiously positive sentiment.",
-        }
-    ]
+    assert exported["schema_version"] == 1
+    assert exported["as_of"] == "2026-09-20"
+    assert datetime.fromisoformat(exported["generated_at"]).tzinfo is not None
+    story = exported["stories"]
+    assert len(story) == 1
+    assert story[0]["thread_id"] == "story_doc_2026_001"
+    assert story[0]["review_date"] == expected_review_date.isoformat()
+    assert story[0]["overdue"] is (expected_review_date < date(2026, 9, 20))
+    assert story[0]["mechanism"] == "A synthetic mechanism."
+    assert story[0]["groups"] == ["synthetic upstream suppliers"]
+    assert story[0]["market_sentiment"] == "Synthetic cautiously positive sentiment."
+    assert story[0]["provenance"]["review_status"] == "unreviewed"
+    assert story[0]["provenance"]["method_version"] == "story_v1"
+    assert story[0]["basket"]["instruments"] == ["tsmc", "asml"]
+    assert story[0]["basket"]["provenance"]["review_status"] == "unreviewed"
+    assert story[0]["basket"]["provenance"]["method_version"] == "basket_v1"
 
 
 def test_append_thread_update_resolves_review_id_against_the_inbox(

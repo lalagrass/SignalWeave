@@ -439,8 +439,20 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "export-baskets":
         try:
             as_of = date.fromisoformat(args.as_of)
-            entries = export_baskets(Path.cwd() / "data" / "private" / "threads", as_of=as_of)
-            path = write_export(entries, args.out_path, as_of=as_of)
+            entries = export_baskets(
+                Path.cwd() / "data" / "private" / "threads",
+                Path.cwd() / "data" / "private" / "runs",
+                as_of=as_of,
+            )
+            path = write_export(
+                entries,
+                args.out_path,
+                as_of=as_of,
+                private_exports_directories=(
+                    Path.cwd() / "data" / "private" / "exports",
+                    Path.cwd().parent / "MarketPulse" / "data" / "private" / "signalweave",
+                ),
+            )
         except (BasketValidationError, ThreadValidationError, OSError, ValueError) as error:
             print(f"Export failed: {error}")
             return 1

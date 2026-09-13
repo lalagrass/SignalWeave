@@ -16,17 +16,32 @@ not needed by anything reading this export today.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from signalweave.basket import load_basket
+from signalweave.runs import load_run
 from signalweave.threads import list_thread_ids, load_thread
 
+SCHEMA_VERSION = 1
 
-def export_baskets(threads_directory: Path, *, as_of: date) -> list[dict[str, Any]]:
+def _provenance(record: Any, runs_directory: Path) -> dict[str, str]:
+    """Export record provenance with its method resolved from an immutable run."""
+    run = load_run(runs_directory / f"{record.run_id}.yaml")
+    return {
+        "review_status": record.review_status,
+        "drafted_by": record.drafted_by,
+        "run_id": record.run_id,
+        "method_version": run.method_version,
+    }
+
+
+def export_baskets(
+    threads_directory: Path, runs_directory: Path, *, as_of: date
+) -> list[dict[str, Any]]:
     """Build one export entry per story. Nothing here reads source text."""
     entries: list[dict[str, Any]] = []
     for thread_id in list_thread_ids(threads_directory):
@@ -38,23 +53,56 @@ def export_baskets(threads_directory: Path, *, as_of: date) -> list[dict[str, An
                 "thread_id": thread.thread_id,
                 "review_date": thread.review_date.isoformat(),
                 "overdue": thread.review_date < as_of,
-                "basket": list(basket.instruments),
                 "mechanism": thread.mechanism,
                 "groups": list(thread.groups),
                 "market_sentiment": thread.market_sentiment,
+                "provenance": _provenance(thread, runs_directory),
+                "basket": {
+                    "instruments": list(basket.instruments),
+                    "provenance": _provenance(basket, runs_directory),
+                },
             }
         )
     return entries
 
 
-def write_export(entries: list[dict[str, Any]], out_path: Path, *, as_of: date) -> Path:
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(
+def write_export(
+    entries: list[dict[str, Any]],
+    out_path: Path,
+    *,
+    as_of: date,
+    private_exports_directories: tuple[Path, ...],
+    generated_at: datetime | None = None,
+) -> Path:
+    generated_at = generated_at or datetime.now(timezone.utc)
+    if generated_at.tzinfo is None:
+        raise ValueError("generated_at must include a timezone")
+    destination = out_path.resolve()
+    if not any(_is_within(destination, directory.resolve()) for directory in private_exports_directories):
+        raise ValueError(
+            "export output must be under data/private/exports/ or "
+            "MarketPulse/data/private/signalweave/"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
         yaml.safe_dump(
-            {"as_of": as_of.isoformat(), "stories": entries},
+            {
+                "schema_version": SCHEMA_VERSION,
+                "as_of": as_of.isoformat(),
+                "generated_at": generated_at.isoformat(),
+                "stories": entries,
+            },
             allow_unicode=True,
             sort_keys=False,
         ),
         encoding="utf-8",
     )
-    return out_path
+    return destination
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True

@@ -2,7 +2,7 @@
 
 ## Project state
 
-**Current phase:** milestone 2 closure — canonical identifier/export v2
+**Current phase:** milestone 3 ready — basket changes (not started)
 
 Milestone 1 is complete: the loop closes. Candidate cards have a validated
 schema, transcripts segment through a model-independent boundary, reviews and
@@ -21,7 +21,7 @@ Every milestone below is accepted on something a reader can look at. Tests still
 have to pass; they are not the deliverable.
 
 **Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
-`uv run --no-sync pytest` (124 passed), and
+`uv run --no-sync pytest` (134 passed, 1 skipped), and
 `uv run --no-sync signalweave public-check` passed on 2026-09-12.
 
 ## Completed
@@ -149,13 +149,23 @@ The mapping carries independent provenance and supports only `resolved`,
 only explicit resolved `TWSE`/`TPEX` symbols and visibly distinguishes its own
 unsupported-venue and no-as-of-price outcomes; it never guesses aliases. The
 synthetic v2 fixture is byte-identical across both repositories. Verification:
-SignalWeave `133 passed, 1 skipped` and `public-check` passed; MarketPulse
-`383 passed` (split across three bounded runs).
+SignalWeave `134 passed, 1 skipped` and `public-check` passed; MarketPulse
+`386 passed` (split across three bounded runs).
 
-**Next scoped slice:** normalize the MarketPulse agent workflow into one
-vendor-neutral canonical contract with a checked mirror, then formally begin
-M3 basket-churn work. This does not authorize reanalysis, source publication,
-direct API use, ranking, scoring, or M3 membership changes yet.
+**MarketPulse agent-workflow closure, completed 2026-09-13.** `AGENTS.md` is
+the sole development contract. The tracked, vendor-neutral
+`.agents/skills/marketpulse-sprint/` is canonical; `.claude/` is its generated
+compatibility mirror. The mirror checker verifies its complete file manifest,
+tracked status, and byte equality; sync removes stale mirror files only from
+that fixed compatibility directory. The planning workflow records only
+de-identified, behavior-level observations in tracked specs, keeping any
+private or assistant-derived feedback under ignored `data/private/`.
+Verification: MarketPulse `391 passed` (three bounded runs) and
+`scripts/check-agent-workflow.sh` passed.
+
+**Next scoped slice:** formally begin M3 basket-churn work. This does not
+authorize reanalysis, source publication, direct API use, ranking, scoring, or
+unscoped membership changes.
 
 ## Milestone 3: the basket changes
 

@@ -28,6 +28,7 @@ SAFE_PRIVATE_LOCATOR_PATTERNS = tuple(
         r"^data/private/threads/$",
         r"^data/private/worklog/$",
         r"^data/private/runs/$",
+        r"^data/private/identifier-mappings/$",
         r"^data/private/exports/$",
         r"^data/private/signalweave/$",
     )

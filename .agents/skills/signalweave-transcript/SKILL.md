@@ -21,10 +21,18 @@ actual provider, model id, and locality in the bundle. A cloud coding agent is
 SDK call does not mean local inference. Validate the finished bundle through
 `import-agent-bundle`; do not manually create its derived records.
 
-Use `direct-api` mode only when the user explicitly authorizes both disclosure
-of that source to the chosen provider and its cost for this run. Then use
-`run-pipeline` with the declared privacy tier. Do not select this path merely
-because a credential exists.
+Before producing an interactive bundle, read `methods/agent_bundle_v1.md` and
+the three methods it composes: `methods/propose_v1.md`,
+`methods/story_v1.md`, and `methods/basket_v2.md`. The bundle remains v1 and
+contains only its existing `basket.instruments` form. If canonical venue/symbol
+identity is needed for export v2, create a separate private
+`identifier-mapping-v1` record under its own method/provenance; do not insert
+mapping fields into an existing `agent-bundle-v1`.
+
+The direct-provider `run-pipeline` path is paused for real material pending
+provider-call and retry limits plus a redacted attempt ledger. Do not select it
+even when a credential and source-disclosure/cost authorization exist; use the
+interactive-agent path until a dedicated hardening sprint re-enables it.
 
 For either mode, report only safe counts, validation outcomes, provenance
 metadata, and ignored output locations. Before any commit or handoff, run the

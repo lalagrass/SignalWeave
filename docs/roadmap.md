@@ -2,7 +2,7 @@
 
 ## Project state
 
-**Current phase:** milestone 2 — first analysis, end to end, one page
+**Current phase:** milestone 2 closure — canonical identifier/export v2
 
 Milestone 1 is complete: the loop closes. Candidate cards have a validated
 schema, transcripts segment through a model-independent boundary, reviews and
@@ -21,7 +21,7 @@ Every milestone below is accepted on something a reader can look at. Tests still
 have to pass; they are not the deliverable.
 
 **Last verified:** `uv sync --no-editable --reinstall-package signalweave`,
-`uv run --no-sync pytest` (95 passed), and
+`uv run --no-sync pytest` (124 passed), and
 `uv run --no-sync signalweave public-check` passed on 2026-09-12.
 
 ## Completed
@@ -63,15 +63,13 @@ Scope:
    only.
 2. **Method files** — versioned prompts tracked in the repo, carrying no source
    text, so a method change is a reviewable patch. **Built** (`methods/`:
-   `propose_v1.md`, `story_v1.md`, `basket_v1.md`).
+   `propose_v1.md`, `story_v1.md`, `basket_v1.md`, `basket_v2.md`).
 3. **Pipeline** — segment → propose per segment → span check → story draft →
    basket. Deterministic orchestration with model steps inside it, not an agent
    loop; every step's input and output are storable, which is what makes a run
-   re-runnable. **Built** (`signalweave.pipeline`, `signalweave.propose`); the
-   proposer calls Anthropic (`ANTHROPIC_API_KEY`, never committed) — a real cost
-   and a real ADR-0009 privacy consequence flagged for the PO, not defaulted to
-   silently. A segment whose proposal fails the span-exists check is skipped,
-   not fatal to the run.
+   re-runnable. The direct-provider implementation is now **paused for real
+   material** pending bounded provider calls/retries and a redacted attempt
+   ledger; interactive-agent intake remains the production path.
 4. **Pass-through gate** — every record carries `review_status: unreviewed`,
    `drafted_by`, and its run id, unconditionally. **Built** — enforced in
    `schema`, `threads`, and `basket`.
@@ -80,9 +78,8 @@ Scope:
    the one-basket-per-story shape from this spec's "Basket shape" section, not
    that file's superseded three-way split. **Built** (`signalweave.export`).
 6. **The page** — rendered by MarketPulse, which owns price: story context, the
-   basket, and the basket's relative strength, on one page. **Not built here** —
-   a separate, later prompt once this export format is stable; MarketPulse's
-   rendering is not this implementation's responsibility.
+   basket, and the basket's relative strength, on one page. **Built and
+   privately walked through**; MarketPulse rendering remains its responsibility.
 
 Also folded in, **built**: the three friction fixes from
 `docs/specs/transcript-navigation-v0.md` (DO-3) — `--review-id` resolution
@@ -90,35 +87,35 @@ Also folded in, **built**: the three friction fixes from
 before any review-content check runs, `--help` documenting every repeatable
 flag.
 
-**Verification status, 2026-09-12:** items 1–5 and the friction fixes pass
+**Historical verification, 2026-09-12:** items 1–5 and the friction fixes pass
 `uv run --no-sync pytest` (95 passed, synthetic transcripts and a fake model
 client only — no real API call made) and `uv run --no-sync signalweave
-public-check`. **Not yet done:** an actual unattended run on one real
-transcript, and item 6. Running the pipeline for real means spending money on
-the Anthropic API and sending real source text to it (ADR-0009) — that run is
-the PO's call to trigger, not something exercised automatically here.
+public-check`. The direct provider route is now paused; interactive-agent intake
+and the private page walkthrough provide the real-material path instead.
 
-**Acceptance (unchanged, not yet met):** the page exists, built unattended from
-one real transcript, and a reader can say what story is being told and whether
-the basket is strengthening. "Interesting" and "garbage" are both results.
+**Acceptance:** the page exists from private intake, and a reader can say what
+story is being told and whether the displayed static RS is `outperforming`,
+`underperforming`, or `n/a`. A static page must not call a level observation
+`strengthening` or `weakening`, which require time-series evidence.
 
 **Boundary-closure slice, completed 2026-09-13.** MarketPulse's committed HEAD
 no longer tracks the confirmed source-input paths. Future podcast/post captures
 and local SignalWeave exports are ignored there; the committed change is
-`82698b9`. This is only a HEAD and future-ingress fix: public Git history was
-not rewritten. Verification: MarketPulse's owner reran `uv run pytest` (`377
+`82698b9`. The subsequent remote remediation preserved a local backup, made the
+repository private, rewrote the affected remote history, and verified the
+private remote's reachable refs. Verification: MarketPulse's owner reran `uv run pytest` (`377
 passed in 62.21s`); SignalWeave ran `uv sync --no-editable
 --reinstall-package signalweave`, `uv run --no-sync pytest` (`108 passed`), and
 `uv run --no-sync signalweave public-check` (passed).
 
-**Export v1 seam, completed 2026-09-13.** SignalWeave now emits
+**Export v1 seam, completed 2026-09-13.** SignalWeave emitted
 `schema_version: 1`, `as_of`, and `generated_at`, with separate story and
 basket provenance. Each provenance block retains `review_status: unreviewed`,
 `drafted_by`, `run_id`, and the `method_version` resolved from its immutable
-run record. MarketPulse is v1-only: it rejects absent, malformed, or unsupported
-versions before rendering, validates exact types and fields, and visibly labels
-both provenance blocks as machine-authored and unreviewed. The canonical and
-vendored fixtures are synthetic and byte-identical. Exports are limited to
+run record. MarketPulse was v1-only at this checkpoint: it rejected absent,
+malformed, or unsupported versions before rendering, validated exact types and
+fields, and visibly labelled both provenance blocks as machine-authored and
+unreviewed. The canonical and vendored fixtures are synthetic and byte-identical. Exports are limited to
 SignalWeave's private export root or MarketPulse's ignored private landing zone.
 Verification: SignalWeave `112 passed` and `public-check` passed; MarketPulse
 `386 passed` (split only to keep terminal runs bounded).
@@ -144,11 +141,21 @@ with no resolved identifiers, and a resolved basket without usable as-of prices;
 it does not change the RS calculation or guess instrument mappings. The private
 pages and reader judgement remain only in the ignored private worklog.
 
-**Next scoped slice:** define a canonical SignalWeave instrument identifier or
-explicit name-to-code mapping contract, export it with the basket, and let
-MarketPulse consume it without guessing. This is a cross-repository contract
-slice; it does not authorize reanalysis, source publication, direct API use,
-history rewriting, ranking, scoring, or M3 basket-churn work.
+**Identifier/export v2 closure, completed 2026-09-13.** SignalWeave now binds a
+private, append-only `identifier-mapping-v1` sidecar to each exact basket
+snapshot and emits schema v2 without modifying v1 exports, baskets, or runs.
+The mapping carries independent provenance and supports only `resolved`,
+`unresolved`, and `not_publicly_listed` identity states. MarketPulse consumes
+only explicit resolved `TWSE`/`TPEX` symbols and visibly distinguishes its own
+unsupported-venue and no-as-of-price outcomes; it never guesses aliases. The
+synthetic v2 fixture is byte-identical across both repositories. Verification:
+SignalWeave `133 passed, 1 skipped` and `public-check` passed; MarketPulse
+`383 passed` (split across three bounded runs).
+
+**Next scoped slice:** normalize the MarketPulse agent workflow into one
+vendor-neutral canonical contract with a checked mirror, then formally begin
+M3 basket-churn work. This does not authorize reanalysis, source publication,
+direct API use, ranking, scoring, or M3 membership changes yet.
 
 ## Milestone 3: the basket changes
 

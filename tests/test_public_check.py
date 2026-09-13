@@ -70,7 +70,8 @@ def test_violations_allows_bare_zone_and_known_subfolder_references(tmp_path: Pa
         "Raw sources live under data/raw/. Candidate cards go to "
         "data/inbox/events/, reviews to data/inbox/reviews/, threads to "
         "data/private/threads/, worklogs to data/private/worklog/, and run "
-        "records to data/private/runs/."
+        "records to data/private/runs/, identity mappings to "
+        "data/private/identifier-mappings/."
     )
 
     assert violations(tmp_path, paths=[doc]) == []

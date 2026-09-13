@@ -8,11 +8,10 @@ import subprocess
 import pytest
 
 import signalweave.agent_bundle as agent_bundle_module
-import signalweave.cli as cli_module
 from signalweave.agent_bundle import AgentBundleError, import_agent_bundle, load_agent_bundle
 from signalweave.basket import load_basket
 from signalweave.cli import main
-from signalweave.export import export_baskets, write_export
+from signalweave.export import export_baskets
 from signalweave.runs import load_run
 from signalweave.schema import load_candidate_event
 from signalweave.threads import load_thread
@@ -249,14 +248,8 @@ def test_concurrent_import_lock_refuses_without_removing_existing_records(tmp_pa
     assert not list(runs.glob("*.yaml"))
 
 
-def test_cli_import_does_not_construct_the_direct_api_client(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_cli_import_uses_no_direct_api_path(tmp_path: Path, monkeypatch, capsys) -> None:
     transcript, bundle = _inputs(tmp_path)
-
-    class DirectApiMustNotRun:
-        def __init__(self, **kwargs) -> None:
-            raise AssertionError("direct provider client must not be constructed")
-
-    monkeypatch.setattr(cli_module, "AnthropicModelClient", DirectApiMustNotRun)
     monkeypatch.chdir(tmp_path)
 
     assert (
@@ -280,36 +273,23 @@ def test_cli_import_does_not_construct_the_direct_api_client(tmp_path: Path, mon
     assert "Synthetic cited words" not in output
 
 
-def test_agent_bundle_export_is_accepted_by_marketpulse_v1_reader(tmp_path: Path) -> None:
+def test_agent_bundle_export_requires_a_separate_identity_mapping(tmp_path: Path) -> None:
     _import(tmp_path)
     _, threads, runs = _directories(tmp_path)
-    export_path = tmp_path / "data" / "private" / "exports" / "baskets.yaml"
-    write_export(
-        export_baskets(threads, runs, as_of=__import__("datetime").date(2026, 9, 13)),
-        export_path,
-        as_of=__import__("datetime").date(2026, 9, 13),
-        private_exports_directories=(tmp_path / "data" / "private" / "exports",),
-    )
+    with pytest.raises(ValueError, match="no active identifier mapping"):
+        export_baskets(
+            threads,
+            runs,
+            tmp_path / "data" / "private" / "identifier-mappings",
+            as_of=__import__("datetime").date(2026, 9, 13),
+        )
 
-    marketpulse = Path(__file__).resolve().parents[2] / "MarketPulse"
-    python = marketpulse / ".venv" / "bin" / "python"
-    if not python.is_file():
-        pytest.skip("MarketPulse virtual environment is unavailable")
-    result = subprocess.run(
-        [
-            str(python),
-            "-c",
-            "from marketpulse.signalweave_import import load_signalweave_export; "
-            "import sys; "
-            "loaded = load_signalweave_export(__import__('pathlib').Path(sys.argv[1])); "
-            "assert len(loaded[2]) == 1",
-            str(export_path),
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0
+
+def test_agent_bundle_method_version_has_a_tracked_method_file() -> None:
+    root = Path(__file__).resolve().parents[1]
+    method = root / "methods" / f"{agent_bundle_module.METHOD_VERSION}.md"
+
+    assert method.is_file()
 
 
 def test_bundle_rejects_unknown_or_incomplete_shapes(tmp_path: Path) -> None:

@@ -15,16 +15,6 @@ from signalweave.extract import (
     select_segment,
     write_candidate_draft,
 )
-from signalweave.pipeline import PipelineError, run_pipeline
-from signalweave.propose import (
-    AnthropicModelClient,
-    ModelBackedBasketProposer,
-    ModelBackedCandidateProposer,
-    ModelBackedStoryProposer,
-    ModelIdentity,
-    ProposeError,
-    load_method,
-)
 from signalweave.public_check import (
     PublicCheckConfigurationError,
     require_configuration,
@@ -36,7 +26,6 @@ from signalweave.review import (
     load_review,
     write_review,
 )
-from signalweave.runs import RunValidationError
 from signalweave.schema import EventValidationError, load_candidate_event
 from signalweave.threads import (
     ThreadValidationError,
@@ -150,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     list_threads_command.add_argument("--as-of", required=True, dest="as_of")
     run_pipeline_command = commands.add_parser(
         "run-pipeline",
-        help="Segment a transcript and run it end to end: propose, span-check, story, basket.",
+        help="Paused experimental direct-provider path; use import-agent-bundle for production intake.",
     )
     run_pipeline_command.add_argument("path", type=Path)
     run_pipeline_command.add_argument("--source", required=True)
@@ -379,73 +368,11 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print("\n".join(lines) if lines else "No threads found.")
     elif args.command == "run-pipeline":
-        identity = ModelIdentity(
-            provider="anthropic", model_id=args.model_id, model_locality="remote"
-        )
-        if args.privacy_tier == "local" and identity.model_locality == "remote":
-            # Refuse before constructing a client (which needs a real API key)
-            # so a local-only source never even asks for one, let alone calls out.
-            print(
-                "Pipeline run failed: source is marked local-only; refusing to "
-                "send it to a remote model provider"
-            )
-            return 1
-        try:
-            date.fromisoformat(args.event_date)
-            methods_directory = Path.cwd() / "methods"
-            runs_directory = Path.cwd() / "data" / "private" / "runs"
-            client = AnthropicModelClient(model_id=args.model_id)
-            candidate_proposer = ModelBackedCandidateProposer(
-                client,
-                identity,
-                method_template=load_method("propose_v1", methods_directory),
-                event_date=args.event_date,
-                runs_directory=runs_directory,
-            )
-            story_proposer = ModelBackedStoryProposer(
-                client,
-                identity,
-                method_template=load_method("story_v1", methods_directory),
-                runs_directory=runs_directory,
-            )
-            basket_proposer = ModelBackedBasketProposer(
-                client,
-                identity,
-                method_template=load_method("basket_v1", methods_directory),
-                runs_directory=runs_directory,
-            )
-            result = run_pipeline(
-                args.path,
-                source=args.source,
-                document_id=args.document_id,
-                event_date=args.event_date,
-                privacy_tier=args.privacy_tier,
-                candidate_proposer=candidate_proposer,
-                story_proposer=story_proposer,
-                basket_proposer=basket_proposer,
-                identity=identity,
-                inbox_events_directory=Path.cwd() / "data" / "inbox" / "events",
-                threads_directory=Path.cwd() / "data" / "private" / "threads",
-            )
-        except (
-            PipelineError,
-            ProposeError,
-            EventValidationError,
-            ThreadValidationError,
-            BasketValidationError,
-            RunValidationError,
-            OSError,
-            UnicodeDecodeError,
-            ValueError,
-        ) as error:
-            print(f"Pipeline run failed: {error}")
-            return 1
         print(
-            f"Pipeline run wrote story {result.thread_id}: "
-            f"{len(result.event_paths)} event(s) from "
-            f"{result.segments_total - result.segments_skipped}/{result.segments_total} "
-            "segment(s)."
+            "Direct provider pipeline is paused pending hardening for provider-call and retry "
+            "limits plus a redacted attempt ledger; use import-agent-bundle instead."
         )
+        return 1
     elif args.command == "import-agent-bundle":
         try:
             result = import_agent_bundle(
@@ -471,6 +398,7 @@ def main(argv: list[str] | None = None) -> int:
             entries = export_baskets(
                 Path.cwd() / "data" / "private" / "threads",
                 Path.cwd() / "data" / "private" / "runs",
+                Path.cwd() / "data" / "private" / "identifier-mappings",
                 as_of=as_of,
             )
             path = write_export(

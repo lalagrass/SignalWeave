@@ -55,6 +55,11 @@ def test_basket_may_be_empty() -> None:
     assert record.instruments == ()
 
 
+def test_basket_rejects_duplicate_members() -> None:
+    with pytest.raises(BasketValidationError, match="duplicates"):
+        basket(instruments=["tsmc", "tsmc"])
+
+
 def test_basket_rejects_a_review_status_other_than_unreviewed() -> None:
     with pytest.raises(BasketValidationError, match="unreviewed"):
         Basket.from_mapping(

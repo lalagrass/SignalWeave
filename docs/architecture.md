@@ -29,7 +29,7 @@ exists to de-identify it; nothing is published today.
 | --- | --- | --- |
 | `data/raw/` | ignored | Original transcripts and observed posts. |
 | `data/inbox/` | ignored | Machine-proposed candidate event cards. |
-| `data/private/` | ignored | Identity maps, private annotations, worklogs, run records, and private stories with their updates and baskets. Run records get their own fixed subfolder in milestone 2; add it to `public_check`'s allowed private-zone subfolders at the same time, or tracked docs cannot name it. |
+| `data/private/` | ignored | Identity mappings, private annotations, worklogs, run records, and private stories with their updates and baskets. `identifier-mappings/` binds canonical identity to an immutable basket snapshot; it is not a basket rewrite. |
 | `data/reviewed/events/` | tracked when safe | Not yet implemented; de-identified records, introduced only when something needs to be published. |
 
 Prompts and method files are **tracked**, under `methods/` at the repo root
@@ -66,6 +66,14 @@ The instruments a story implicates, in any market. It starts deliberately wide
 and changes over time; membership changes are dated, carry a reason, and are
 append-only. No weights, no ordering, no score.
 
+### Identifier mapping
+
+One private, immutable mapping revision binds to an exact basket snapshot by
+thread id, basket run id, and basket creation time. It preserves every declared
+member and independently records canonical identity provenance. SignalWeave
+can say `resolved`, `unresolved`, or `not_publicly_listed`; MarketPulse alone
+derives venue support and as-of price availability ([ADR-0012](decisions/ADR-0012-identifier-mapping-sidecars.md)).
+
 ## Modules
 
 | Module | Responsibility | Status |
@@ -77,6 +85,7 @@ append-only. No weights, no ordering, no score.
 | `threads` | Append evidence to stories. | shipped |
 | `runs` | Record and re-read pipeline runs. | shipped |
 | `basket` | Validate and store one story's instrument list. | shipped |
+| `identifier_mapping` | Validate immutable canonical identity mappings for export v2. | shipped |
 | `propose` | Model-backed candidate, story, and basket proposers behind the existing protocol. | shipped |
 | `pipeline` | Deterministic orchestration: segment, propose, span check, story, basket. | shipped |
 | `agent_bundle` | Validate and import a no-network interactive-agent bundle into the same private records. | shipped |
@@ -88,9 +97,9 @@ append-only. No weights, no ordering, no score.
 - SignalWeave never fetches a price, never ranks a story, never scores a basket.
   The export is the seam; MarketPulse consumes it, tracks relative strength, and
   renders the page.
-- `run-pipeline` is the direct-provider route and requires separate source
-  disclosure and cost authorization. `import-agent-bundle` makes no provider
-  request; it validates a previously produced interactive-agent bundle locally.
+- `run-pipeline` is paused pending bounded provider calls/retries and a redacted
+  attempt ledger. `import-agent-bundle` makes no provider request; it validates
+  a previously produced interactive-agent bundle locally.
 - No command may print a number claiming a record is good. Cross-model agreement
   may route attention to disagreements; it may never be reported as a score.
 - The pipeline is deterministic orchestration with model steps inside it, not an

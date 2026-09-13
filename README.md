@@ -130,30 +130,12 @@ constructs a provider client or makes a network request.
 See [transcript processing](docs/transcript-processing.md) for the strict bundle
 contract and operational boundaries.
 
-## Process a transcript through a direct provider API
+## Direct provider API (paused)
 
-`run-pipeline` segments a transcript and runs it end to end: propose per
-segment, span-exists check, story draft, basket draft. Every record it writes
-is machine-authored and stamped `review_status: unreviewed` with `drafted_by`
-and its run id (ADR-0008); nothing here waits for a human.
-
-```bash
-export ANTHROPIC_API_KEY=sk-...
-uv run --no-sync signalweave run-pipeline path/to/private.md \
-  --source source_a \
-  --document-id doc_2026_001 \
-  --date 2026-09-11 \
-  --model-id claude-sonnet-4-5-20250929 \
-  --privacy-tier remote
-```
-
-This calls the Anthropic API once per segment plus once for the story and once
-for the basket, and writes one immutable run record per call under ignored
-`data/private/runs/` (ADR-0009). `--privacy-tier local` refuses to run at all —
-loudly, before any call — rather than silently sending a local-only source to
-a remote provider. Running this against real material spends money and sends
-that material to a third party. It requires separate explicit source-disclosure
-and cost authorization; do not select it merely because an API key exists.
+`run-pipeline` is intentionally paused for real material. It will not construct
+a provider client or read the supplied transcript until a dedicated hardening
+slice adds enforced provider-call/retry limits and a redacted attempt ledger.
+Use the interactive-agent bundle path above in the interim.
 
 ## Export baskets for MarketPulse
 
@@ -162,11 +144,12 @@ and cost authorization; do not select it merely because an API key exists.
 uv run --no-sync signalweave export-baskets --as-of 2026-09-20 --out "$PRIVATE_EXPORT_PATH"
 ```
 
-Emits schema v1: one entry per story with context, review date, an overdue flag,
-a flat instrument basket, and separate story/basket provenance. The destination
-must be a private SignalWeave export location or MarketPulse's private landing
-zone. This is the seam with MarketPulse; SignalWeave never fetches a price or
-ranks a basket.
+Emits schema v2: one entry per story with context, review date, an overdue flag,
+identity-mapped basket members, and separate story/basket/mapping provenance.
+It requires a complete private `identifier-mapping-v1` sidecar for every basket
+snapshot. The destination must be a private SignalWeave export location or
+MarketPulse's private landing zone. This is the seam with MarketPulse;
+SignalWeave never fetches a price or ranks a basket.
 
 ## Local setup
 

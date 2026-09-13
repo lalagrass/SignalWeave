@@ -576,15 +576,12 @@ def test_list_threads_marks_overdue_only_from_the_supplied_as_of_date(
     assert "OVERDUE" in overdue_output
 
 
-def test_run_pipeline_writes_events_story_and_basket_end_to_end(
+def test_run_pipeline_is_paused_without_reading_or_sending_the_source(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
-    monkeypatch.setattr(cli_module, "AnthropicModelClient", FakeAnthropicModelClient)
-    shutil.copytree(METHODS_SOURCE, tmp_path / "methods")
     transcript = tmp_path / "private.md"
     transcript.write_text(
-        "Private source wording should never reach a tracked file.\n\n"
-        "A second synthetic paragraph makes the segment count deterministic.",
+        "Private source wording should never be read by the paused command.",
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
@@ -606,31 +603,18 @@ def test_run_pipeline_writes_events_story_and_basket_end_to_end(
                 "remote",
             ]
         )
-        == 0
+        == 1
     )
     output = capsys.readouterr().out
-    assert "story_doc_2026_001" in output
+    assert "paused" in output
     assert "Private source wording" not in output
-
-    events_directory = tmp_path / "data" / "inbox" / "events"
-    assert len(list(events_directory.glob("*.yaml"))) == 2
-    thread_path = tmp_path / "data" / "private" / "threads" / "story_doc_2026_001" / "thread.yaml"
-    basket_path = tmp_path / "data" / "private" / "threads" / "story_doc_2026_001" / "basket.yaml"
-    assert thread_path.exists()
-    assert basket_path.exists()
-    assert "Private source wording" not in thread_path.read_text(encoding="utf-8")
-    assert "Private source wording" not in basket_path.read_text(encoding="utf-8")
-    runs_directory = tmp_path / "data" / "private" / "runs"
-    assert len(list(runs_directory.glob("*.yaml"))) == 4
+    assert not (tmp_path / "data").exists()
 
 
 def test_run_pipeline_refuses_a_local_only_source(tmp_path: Path, monkeypatch, capsys) -> None:
-    monkeypatch.setattr(cli_module, "AnthropicModelClient", FakeAnthropicModelClient)
-    shutil.copytree(METHODS_SOURCE, tmp_path / "methods")
     transcript = tmp_path / "private.md"
     transcript.write_text(
-        "Private wording that must never leave this file.\n\n"
-        "A second synthetic paragraph makes the segment count deterministic.",
+        "Private wording that must never be read by the paused command.",
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
@@ -654,9 +638,10 @@ def test_run_pipeline_refuses_a_local_only_source(tmp_path: Path, monkeypatch, c
         )
         == 1
     )
-    assert "local-only" in capsys.readouterr().out
+    assert "paused" in capsys.readouterr().out
 
 
+@pytest.mark.skip(reason="The direct provider route is paused; v2 export is covered by test_export.py.")
 def test_export_baskets_writes_one_flat_basket_per_story(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:

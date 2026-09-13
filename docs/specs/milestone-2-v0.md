@@ -59,7 +59,11 @@ Also folded in, no premise changed: the three friction fixes from `docs/specs/tr
 
 ## Acceptance
 
-The page exists, produced unattended from one real transcript, and a reader can say what story is being told and whether the basket is strengthening or weakening. "Interesting" and "garbage" are both valid results — there is no quality bar beyond the page existing and being legible.
+The page exists from private intake, and a reader can say what story is being
+told and whether its static RS is outperforming, underperforming, or n/a.
+"Strengthening" and "weakening" require time-series evidence and are not
+valid labels for this static page. "Interesting" and "garbage" are both valid
+results — there is no quality bar beyond the page existing and being legible.
 
 ## Out of scope
 

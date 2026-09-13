@@ -1,0 +1,51 @@
+schema_version: 2
+as_of: "2026-09-20"
+generated_at: "2026-09-20T00:00:00+00:00"
+stories:
+  - thread_id: "story_synthetic_001"
+    review_date: "2026-10-04"
+    overdue: false
+    mechanism: "Synthetic mechanism."
+    groups: ["synthetic group"]
+    market_sentiment: "Synthetic sentiment."
+    provenance:
+      review_status: "unreviewed"
+      drafted_by: "model_synthetic"
+      run_id: "run_story_synthetic001"
+      method_version: "story_v1"
+    basket:
+      members:
+        - declared_identifier: "synthetic_twse"
+          mapping_status: "resolved"
+          venue: "TWSE"
+          symbol: "2330"
+          reason: null
+        - declared_identifier: "synthetic_overseas"
+          mapping_status: "resolved"
+          venue: "NASDAQ"
+          symbol: "SYN"
+          reason: null
+        - declared_identifier: "synthetic_unknown"
+          mapping_status: "unresolved"
+          venue: null
+          symbol: null
+          reason: "No canonical listing supplied."
+        - declared_identifier: "synthetic_private"
+          mapping_status: "not_publicly_listed"
+          venue: null
+          symbol: null
+          reason: "Not publicly listed."
+      provenance:
+        review_status: "unreviewed"
+        drafted_by: "model_synthetic"
+        run_id: "run_basket_synthetic001"
+        method_version: "basket_v1"
+      identifier_provenance:
+        review_status: "unreviewed"
+        drafted_by: "mapping_agent_synthetic"
+        run_id: "run_mapping_synthetic001"
+        provider: "synthetic_provider"
+        model_id: "synthetic-mapper"
+        model_locality: "local"
+        method_version: "identifier_mapping_v1"
+        created_at: "2026-09-20T00:00:00+00:00"

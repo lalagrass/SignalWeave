@@ -34,8 +34,9 @@ blocks even when their values are the same.
 
 Interactive-agent mode makes no direct provider SDK/API call. A cloud coding
 agent is recorded as `remote` unless its on-device model locality is verifiable.
-The direct API route remains available through `run-pipeline`, but needs its own
-explicit source-disclosure and cost authorization immediately before use.
+The direct API route is paused pending a separate hardening slice for enforced
+provider-call/retry limits and a redacted attempt ledger. It must not be used
+for real material in the interim.
 
 ## Consequences
 
@@ -49,3 +50,6 @@ explicit source-disclosure and cost authorization immediately before use.
 - The importer cannot independently prove a bundle's claimed provider metadata.
   Truthful provenance is an operator responsibility, made explicit rather than
   defaulted or inferred from API-key absence.
+- Canonical identity mapping is not added to `agent-bundle-v1`. It is an
+  independent private sidecar; a future combined payload requires
+  `agent-bundle-v2` (ADR-0012).

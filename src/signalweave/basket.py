@@ -165,7 +165,10 @@ def _instrument(value: Any) -> str:
 def _instrument_list(value: Any) -> tuple[str, ...]:
     if not isinstance(value, list):
         raise BasketValidationError("instruments must be a list")
-    return tuple(_instrument(item) for item in value)
+    instruments = tuple(_instrument(item) for item in value)
+    if len(set(instruments)) != len(instruments):
+        raise BasketValidationError("instruments must not contain duplicates")
+    return instruments
 
 
 def _non_empty_string(value: Any, field: str) -> str:

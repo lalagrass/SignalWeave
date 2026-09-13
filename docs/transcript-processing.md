@@ -69,12 +69,17 @@ Keep the transcript and bundle in ignored local storage. The importer writes one
 records point to that shared run. Do not re-import an already recorded bundle;
 collisions are an intentional refusal.
 
+Before producing a bundle, read `methods/agent_bundle_v1.md`, which composes
+`propose_v1`, `story_v1`, and `basket_v2`. Canonical venue/symbol mapping is not
+part of this v1 payload; it is a separately-provenanced private
+`identifier-mapping-v1` sidecar bound to the resulting basket snapshot.
+
 ## Direct provider API
 
-`run-pipeline` sends transcript material to a provider. Before invoking it on a
-real source, obtain explicit authorization for that disclosure and the expected
-cost, choose the provider/model, and record the source's privacy tier. An API
-key's presence is not authorization and must not select this path by default.
+`run-pipeline` is paused and refuses all execution pending provider-call/retry
+limits and a redacted attempt ledger. Do not invoke it on real material even if
+source disclosure and cost authorization are available; use the interactive
+bundle path until the dedicated hardening sprint completes.
 
 See [ADR-0009](decisions/ADR-0009-model-provider-boundary.md) and
 [ADR-0011](decisions/ADR-0011-interactive-agent-transcript-processing.md).

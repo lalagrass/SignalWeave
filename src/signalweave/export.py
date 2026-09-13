@@ -23,10 +23,14 @@ from typing import Any
 import yaml
 
 from signalweave.basket import load_basket
+from signalweave.identifier_mapping import (
+    load_active_identifier_mapping,
+    mapping_provenance,
+)
 from signalweave.runs import load_run
 from signalweave.threads import list_thread_ids, load_thread
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 def _provenance(record: Any, runs_directory: Path) -> dict[str, str]:
     """Export record provenance with its method resolved from an immutable run."""
@@ -40,14 +44,25 @@ def _provenance(record: Any, runs_directory: Path) -> dict[str, str]:
 
 
 def export_baskets(
-    threads_directory: Path, runs_directory: Path, *, as_of: date
+    threads_directory: Path,
+    runs_directory: Path,
+    identifier_mappings_directory: Path,
+    *,
+    as_of: date,
 ) -> list[dict[str, Any]]:
-    """Build one export entry per story. Nothing here reads source text."""
+    """Build one v2 export entry per story. Nothing here reads source text.
+
+    Every v2 basket member comes from an independent, immutable identity
+    mapping bound to the basket's exact run and timestamp.  A missing or
+    ambiguous mapping is an export failure, never a name-resolution fallback.
+    """
     entries: list[dict[str, Any]] = []
     for thread_id in list_thread_ids(threads_directory):
         thread_directory = threads_directory / thread_id
         thread = load_thread(thread_directory)
         basket = load_basket(thread_directory)
+        mapping = load_active_identifier_mapping(identifier_mappings_directory, basket=basket)
+        identifier_provenance = mapping_provenance(mapping, runs_directory)
         entries.append(
             {
                 "thread_id": thread.thread_id,
@@ -58,8 +73,9 @@ def export_baskets(
                 "market_sentiment": thread.market_sentiment,
                 "provenance": _provenance(thread, runs_directory),
                 "basket": {
-                    "instruments": list(basket.instruments),
+                    "members": [member.to_mapping() for member in mapping.members],
                     "provenance": _provenance(basket, runs_directory),
+                    "identifier_provenance": identifier_provenance.to_mapping(),
                 },
             }
         )

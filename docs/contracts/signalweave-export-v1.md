@@ -1,8 +1,9 @@
-# SignalWeave export v1
+# SignalWeave export v1 (legacy, immutable)
 
-MarketPulse accepts only `schema_version: 1` (an integer). An absent, wrong, or
-unsupported version fails before page rendering; re-export from SignalWeave
-rather than inventing a compatibility path.
+This is the original immutable v1 contract. It is retained to document and
+validate v1 exports exactly as written; v2 is defined separately in
+`signalweave-export-v2.md`. A consumer that has moved to v2 rejects v1 and
+asks for a re-export rather than inventing a compatibility path.
 
 ```yaml
 schema_version: 1

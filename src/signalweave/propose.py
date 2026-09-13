@@ -233,7 +233,7 @@ class ModelBackedBasketProposer:
         *,
         method_template: str,
         runs_directory: Path,
-        method_version: str = "basket_v1",
+        method_version: str = "basket_v2",
     ) -> None:
         self._client = client
         self._identity = identity
@@ -259,10 +259,10 @@ class ModelBackedBasketProposer:
         )
         parsed = _parse_json(output)
         if not isinstance(parsed, dict) or "instruments" not in parsed:
-            raise ProposeError("basket_v1 output must be a JSON object with an instruments field")
+            raise ProposeError("basket_v2 output must be a JSON object with an instruments field")
         instruments = parsed["instruments"]
         if not isinstance(instruments, list):
-            raise ProposeError("basket_v1 instruments must be a JSON array")
+            raise ProposeError("basket_v2 instruments must be a JSON array")
         return list(instruments), run_id
 
 

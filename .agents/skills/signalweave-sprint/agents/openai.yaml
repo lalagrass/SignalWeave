@@ -1,0 +1,4 @@
+interface:
+  display_name: "SignalWeave Sprint"
+  short_description: "Run one scoped SignalWeave sprint end to end"
+  default_prompt: "Run the next SignalWeave sprint."

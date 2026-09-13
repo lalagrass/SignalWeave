@@ -38,6 +38,11 @@ never scores a basket.
 
 ## Development workflow
 
+The authoritative checkout is the Git repository whose configured remote is
+SignalWeave. Before editing, resolve its root with Git and verify that remote; do
+not work from copied output folders or transplant `.git` metadata between
+directories.
+
 1. Read `docs/architecture.md`, `docs/roadmap.md`, and relevant ADRs.
 2. Choose one roadmap item with explicit acceptance criteria.
 3. Add or update tests before declaring the item complete.
@@ -46,6 +51,11 @@ never scores a basket.
 
 A milestone's acceptance is something a reader can look at, not a list of
 commands that exit zero. Tests still have to pass; they are not the deliverable.
+
+When the user asks to plan, start, continue, or run a sprint, use the repository
+skill `signalweave-sprint`. It authorizes read-only delegation to the project PO,
+correctness reviewer, and privacy reviewer while keeping the main agent as the
+only file writer. See `docs/development-workflow.md`.
 
 ## Handoff protocol
 

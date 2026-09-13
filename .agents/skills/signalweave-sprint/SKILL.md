@@ -18,7 +18,9 @@ user's request takes precedence over this workflow. Follow the repository's
    editing and identify the mismatch. Never copy `.git` metadata between folders.
 3. If the current request includes commit or push and the checkout is on an
    integration branch, create a focused `codex/<scope>` branch before editing.
-4. Do not read private-source contents to choose or plan engineering work.
+4. Local source inspection is allowed when it is relevant to the requested
+   outcome. Use targeted reads, hashes, or comparisons as appropriate, and keep
+   source content and source-specific findings in ignored private zones.
 
 ## Form the sprint contract
 
@@ -49,7 +51,8 @@ user's request takes precedence over this workflow. Follow the repository's
 3. After implementation, delegate two independent read-only reviews, which may
    run in parallel. Include the agreed sprint contract in each review request:
    - `reviewer` checks correctness, regressions, contracts, and tests.
-   - `privacy_reviewer` checks repository boundaries without reading private data.
+   - `privacy_reviewer` checks repository and publication boundaries. It may
+     inspect local private material when needed but must not reproduce it.
 4. Fix blocking findings as the single writer, rerun affected checks, and ask for
    one final review pass only when the fix materially changes the reviewed design.
    Keep non-blocking follow-ups visible instead of silently widening the sprint.

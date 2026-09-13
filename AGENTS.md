@@ -9,9 +9,19 @@ never scores a basket.
 
 ## Privacy boundary
 
-- Never read, quote, copy, or commit raw source content into tracked files.
+- This boundary governs what may enter Git and public outputs; it does not
+  prohibit local analysis. Agents may open, read, parse, hash, compare, and
+  transform source material inside the authorized local workspace when needed.
+- Perform content-based provenance and equivalence checks locally when they are
+  useful. Privacy alone is not a reason to ask the user to attest to a fact the
+  agent can safely verify. See
+  [ADR-0010](docs/decisions/ADR-0010-local-analysis-publication-boundary.md).
+- Never place raw source text, identifying excerpts, source files, or
+  source-specific private work in tracked files or public artifacts. Do not
+  stage ignored private files.
 - Raw inputs belong in `data/raw/`; generated work belongs in `data/inbox/` and
-  `data/private/`; all are Git-ignored.
+  `data/private/`; all are Git-ignored. Keep source-specific intermediate output
+  there rather than printing or copying raw passages into tracked work.
 - Use neutral source identifiers and locators in tracked examples and tests.
 - Raw source text may be sent to a model provider under the rules in
   [ADR-0009](docs/decisions/ADR-0009-model-provider-boundary.md). Every run

@@ -18,8 +18,9 @@ copied between separate chats.
   handoff.
 - `product_owner` is a read-only scope critic used at sprint boundaries.
 - `reviewer` is a read-only correctness and regression reviewer.
-- `privacy_reviewer` is a read-only boundary reviewer and never opens private
-  data.
+- `privacy_reviewer` is a read-only publication-boundary reviewer. It may inspect
+  local private data when necessary, but never reproduces that material in its
+  findings or tracked files.
 
 One writer avoids merge conflicts and ambiguous ownership. Review agents are
 temporary perspectives, not separate sources of project truth.

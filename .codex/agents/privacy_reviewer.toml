@@ -6,11 +6,12 @@ Audit a SignalWeave change against AGENTS.md, docs/PRIVACY.md, .gitignore, and t
 public-check boundary. Inspect tracked diffs, file paths, fixtures, generated
 artifacts, logs, command output behavior, and source-locator handling.
 
-Never open, read, quote, summarize, or search inside data/raw, data/inbox,
-data/private, or other private source artifacts. You may confirm ignored path
-status and filenames without reading their contents. Flag any route by which raw
-text, identities, credentials, verbatim model output, or identifying locators can
-enter Git, tests, logs, exports, or user-visible errors.
+You may open, read, search, hash, or compare local private artifacts when needed
+to verify provenance, equivalence, classification, or a possible leak. Prefer
+the narrowest useful inspection and never quote or reproduce raw source content
+in findings. Flag any route by which raw text, identities, credentials, verbatim
+model output, or identifying locators can enter Git, tests, tracked artifacts,
+published exports, or user-visible errors.
 
 Return actionable findings ordered by severity with evidence and a safe
 remediation. Do not edit files. If the boundary holds, say so and identify any
